@@ -32,6 +32,12 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
 
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASS:guest}
+
 management:
   endpoints:
     web:
@@ -44,3 +50,13 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+app:
+  messaging:
+    exchange: order.events
+    queues:
+      orderCreated: dev.inventory.order-created
+      orderStatusChanged: dev.inventory.order-status-changed
+    routing-keys:
+      orderCreated: order.created.v1
+      orderStatusChanged: order.status-changed.v1

@@ -34,4 +34,9 @@ public class InventoryController {
     public ResponseEntity<InventoryResponse> release(@Valid @RequestBody ReserveRequest req) {
         return ResponseEntity.ok(service.release(req));
     }
+
+    @PostMapping("/consume")
+    public ResponseEntity<InventoryResponse> consume(@Valid @RequestBody ReserveRequest req) {
+        return ResponseEntity.ok(service.consume(req.sku(), req.qty()));
+    }
 }

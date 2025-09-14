@@ -50,6 +50,18 @@ public class InventoryService {
         return toDto(saved);
     }
 
+    @Transactional
+    public InventoryResponse consume(String sku, int qty) {
+        if (qty <= 0) throw new IllegalArgumentException("qty must be > 0");
+        var item = repo.findById(sku).orElseThrow(() -> new IllegalArgumentException("SKU not found"));
+        if (item.getReservedQty() < qty) {
+            throw new IllegalArgumentException("Reserved not enough to consume");
+        }
+        item.setReservedQty(item.getReservedQty() - qty);
+        var saved = repo.save(item);
+        return toDto(saved);
+    }
+
     private InventoryResponse toDto(InventoryItem i) {
         return new InventoryResponse(i.getSku(), i.getAvailableQty(), i.getReservedQty(), i.getUpdatedAt());
     }
