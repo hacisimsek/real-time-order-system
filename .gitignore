@@ -1,0 +1,46 @@
+# Build output
+/target/
+!/src/main/resources/static/
+/build/
+
+# Maven wrapper
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE settings
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.sw?
+*~
+
+# Logs
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+*.hprof
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment / local configs
+*.env
+.env.*
+application-local.yml
+application-local.properties
+
+# Python venv (if used in scripts)
+.venv/
+
+# Docker
+/deploy/*.pid
+/deploy/*.log
+
+# Coverage / test reports
+/coverage/
+*.lcov
