@@ -23,3 +23,6 @@ app:
     queues:
       orderCreated: dev.notifications.order-created
       orderStatusChanged: dev.notifications.order-status-changed
+    dlq:
+      orderCreated: dev.notifications.order-created.dlq
+      orderStatusChanged: dev.notifications.order-status-changed.dlq
