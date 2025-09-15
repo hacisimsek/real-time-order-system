@@ -1,6 +1,7 @@
 package com.hacisimsek.inventory.messaging;
 
 import com.hacisimsek.inventory.config.AmqpConfig;
+import com.hacisimsek.inventory.metrics.MetricsService;
 import com.hacisimsek.inventory.service.IdempotencyService;
 import com.hacisimsek.inventory.service.InventoryService;
 import com.rabbitmq.client.Channel;
@@ -24,12 +25,14 @@ public class OrderEventsListener {
     private final IdempotencyService idempotency;
     private final RabbitTemplate rabbit;
     private final com.hacisimsek.inventory.config.AmqpProps props;
+    private final MetricsService metricsService;
 
-    public OrderEventsListener(InventoryService service , IdempotencyService idempotency , RabbitTemplate rabbit, com.hacisimsek.inventory.config.AmqpProps props) {
+    public OrderEventsListener(InventoryService service , IdempotencyService idempotency , RabbitTemplate rabbit, com.hacisimsek.inventory.config.AmqpProps props , MetricsService metricsService) {
         this.service = service;
         this.idempotency = idempotency;
         this.rabbit = rabbit;
         this.props = props;
+        this.metricsService = metricsService;
     }
 
     @RabbitListener(queues = "${app.messaging.queues.orderCreated}", containerFactory = "manualAckContainerFactory")
@@ -52,6 +55,7 @@ public class OrderEventsListener {
                     }
                 }
             });
+            metricsService.incProcessed("order.created");
             ch.basicAck(tag, false);
         } catch (Exception e) {
             log.error("order.created failed (msgId={}, retries={})", effectiveId, retries, e);
@@ -92,6 +96,7 @@ public class OrderEventsListener {
                     default -> {}
                 }
             }
+            metricsService.incProcessed("order.status-changed");
             ch.basicAck(tag, false);
         } catch (Exception e) {
             log.error("status-changed failed (msgId={}, retries={})", effectiveId, retries, e);
@@ -103,7 +108,9 @@ public class OrderEventsListener {
 
     private void handleFailure(String which, Map<String,Object> payload, String msgId, Integer retries, long tag, Channel ch, String retryRoutingKey, String dlqRoutingKey) throws Exception {
         int attempt = retries == null ? 0 : retries;
+        String type = which.equals("order.created") ? "created" : "status_changed";
         if (attempt < MAX_RETRIES) {
+            metricsService.incRetried(type);
             int next = attempt + 1;
             log.warn("Retrying {} (attempt {}/{}) messageId={}", which, next, MAX_RETRIES, msgId);
             ch.basicAck(tag, false);
@@ -113,6 +120,7 @@ public class OrderEventsListener {
                         m.getMessageProperties().setHeader("x-retries", next);
                         return m; });
         } else {
+            metricsService.incDlq(type);
             log.error("Max retries exceeded for {} → send to DLQ, messageId={}", which, msgId);
             ch.basicAck(tag, false);
             rabbit.convertAndSend(
