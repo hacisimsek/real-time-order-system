@@ -1,0 +1,115 @@
+{
+  "id": null,
+  "uid": "rtos-main",
+  "title": "RTOS — Order & Inventory Observability",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-15m", "to": "now" },
+  "tags": ["rtos", "spring-boot", "micrometer"],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Inventory messages processed (rate/1m) by type",
+      "id": 1,
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum by (type) (rate(inventory_messages_processed_total{job=\"inventory-service\"}[1m]))",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Inventory message retries (rate/1m) by type",
+      "id": 2,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by (type) (rate(inventory_messages_retried_total{job=\"inventory-service\"}[1m]))",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Inventory messages to DLQ (rate/1m) by type",
+      "id": 3,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by (type) (rate(inventory_messages_dlq_total{job=\"inventory-service\"}[1m]))",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP request rate (1m) by status — Inventory",
+      "id": 4,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"inventory-service\"}[1m]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP latency p95 — Inventory",
+      "id": 5,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"inventory-service\"}[5m])))",
+          "legendFormat": "p95",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM memory used by area — Inventory",
+      "id": 6,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum by (area) (jvm_memory_used_bytes{job=\"inventory-service\"})",
+          "legendFormat": "{{area}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "JVM threads — Inventory",
+      "id": 7,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads{job=\"inventory-service\"}",
+          "legendFormat": "live",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_threads_daemon_threads{job=\"inventory-service\"}",
+          "legendFormat": "daemon",
+          "refId": "B"
+        }
+      ]
+    }
+  ],
+  "templating": { "list": [] },
+  "annotations": {
+    "list": [
+      { "builtIn": 1, "type": "dashboard", "name": "Annotations & Alerts", "hide": false }
+    ]
+  },
+  "links": []
+}

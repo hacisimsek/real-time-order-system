@@ -23,10 +23,9 @@ public class OrderEventsListener {
             if ("C-FAIL".equals(payload.get("customerId"))) {
                 throw new IllegalStateException("Simulated processing error");
             }
-            // TODO: e-posta mock
             ch.basicAck(tag, false);
         } catch (Exception e) {
-            log.error("❌ order.created failed -> DLQ", e);
+            log.error("order.created failed -> DLQ", e);
             ch.basicReject(tag, false);
         }
     }

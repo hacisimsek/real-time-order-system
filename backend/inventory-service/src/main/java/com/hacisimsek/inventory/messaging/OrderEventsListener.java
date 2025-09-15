@@ -54,7 +54,7 @@ public class OrderEventsListener {
             });
             ch.basicAck(tag, false);
         } catch (Exception e) {
-            log.error("❌ order.created failed (msgId={}, retries={})", effectiveId, retries, e);
+            log.error("order.created failed (msgId={}, retries={})", effectiveId, retries, e);
             handleFailure("order.created", payload, effectiveId, retries, tag, ch,
                     props.routingKeys().orderCreated() + ".retry",
                     props.routingKeys().orderCreated() + ".dlq");
