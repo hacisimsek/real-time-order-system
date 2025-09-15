@@ -54,6 +54,7 @@ management:
 app:
   messaging:
     exchange: order.events
+    retryTtlMs: 10000
     queues:
       orderCreated: dev.inventory.order-created
       orderStatusChanged: dev.inventory.order-status-changed
