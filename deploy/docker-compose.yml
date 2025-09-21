@@ -10,16 +10,17 @@ services:
   postgres:
     image: postgres:16
     container_name: dev-postgres
+    env_file: ./.env
     environment:
-      POSTGRES_DB: appdb
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-    ports: ["5432:5432"]
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports: ["${POSTGRES_PORT}:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks: [rtos]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -28,18 +29,31 @@ services:
   redis:
     image: redis:7-alpine
     container_name: dev-redis
-    ports: ["6379:6379"]
+    env_file: ./.env
+    ports: ["${REDIS_PORT}:6379"]
     networks: [rtos]
     restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:3-management
     container_name: dev-rabbitmq
-    ports: [ "5672:5672","15672:15672","15692:15692" ]
+    env_file: ./.env
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "15692:15692"
     environment:
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbitmq_management load_definitions "/etc/rabbitmq/definitions.json"'
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbit vm_memory_high_watermark,0.8 -rabbitmq_management load_definitions "/etc/rabbitmq/definitions.json"'
     volumes:
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks: [rtos]
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
 
   # ========= APP SERVICES =========
   order-service:
@@ -48,37 +62,26 @@ services:
       dockerfile: Dockerfile
     image: rtos/order-service:dev
     container_name: order-service
+    env_file: ./.env
     environment:
-      PORT: 8081
-      # DB
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: appdb
-      DB_USER: app
-      DB_PASS: app
-      # Rabbit
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
-      RABBIT_USER: guest
-      RABBIT_PASS: guest
-      SPRING_PROFILES_ACTIVE: dev
-      JWT_SECRET: ${JWT_SECRET:-change-me-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
-      # (opsiyonel) JVM ayarları:
-      # JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:+UseG1GC"
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      PORT: ${ORDER_HTTP_PORT}
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASS: ${POSTGRES_PASSWORD}
+      RABBIT_HOST: ${RABBIT_HOST}
+      RABBIT_PORT: ${RABBIT_PORT}
+      RABBIT_USER: ${RABBIT_USER}
+      RABBIT_PASS: ${RABBIT_PASS}
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    ports: ["8081:8081"]
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports: ["${ORDER_HTTP_PORT}:8081"]
     networks: [rtos]
     restart: unless-stopped
-
-    # Eğer outbox publisher kullanıyorsan logları görmek için:
-    # logging:
-    #   options:
-    #     max-size: "10m"
-    #     max-file: "3"
 
   notification-service:
     build:
@@ -86,18 +89,18 @@ services:
       dockerfile: Dockerfile
     image: rtos/notification-service:dev
     container_name: notification-service
+    env_file: ./.env
     environment:
-      PORT: 8082
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
-      RABBIT_USER: guest
-      RABBIT_PASS: guest
-      SPRING_PROFILES_ACTIVE: dev
-      JWT_SECRET: ${JWT_SECRET:-change-me-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      PORT: ${NOTIFICATION_HTTP_PORT}
+      RABBIT_HOST: ${RABBIT_HOST}
+      RABBIT_PORT: ${RABBIT_PORT}
+      RABBIT_USER: ${RABBIT_USER}
+      RABBIT_PASS: ${RABBIT_PASS}
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
-      rabbitmq:
-        condition: service_healthy
-    ports: ["8082:8082"]
+      rabbitmq: { condition: service_healthy }
+    ports: ["${NOTIFICATION_HTTP_PORT}:8082"]
     networks: [rtos]
     restart: unless-stopped
 
@@ -107,58 +110,56 @@ services:
       dockerfile: Dockerfile
     image: rtos/inventory-service:dev
     container_name: inventory-service
+    env_file: ./.env
     environment:
-      PORT: 8083
-      # DB
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: appdb
-      DB_USER: app
-      DB_PASS: app
-      # Rabbit
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
-      RABBIT_USER: guest
-      RABBIT_PASS: guest
-      # Security / Profile
-      SPRING_PROFILES_ACTIVE: dev
-      JWT_SECRET: ${JWT_SECRET:-change-me-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      PORT: ${INVENTORY_HTTP_PORT}
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASS: ${POSTGRES_PASSWORD}
+      RABBIT_HOST: ${RABBIT_HOST}
+      RABBIT_PORT: ${RABBIT_PORT}
+      RABBIT_USER: ${RABBIT_USER}
+      RABBIT_PASS: ${RABBIT_PASS}
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    ports: ["8083:8083"]
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports: ["${INVENTORY_HTTP_PORT}:8083"]
     networks: [rtos]
     restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: dev-prometheus
-    ports: [ "9090:9090" ]
+    ports: ["9090:9090"]
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --web.enable-lifecycle
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
-    networks: [ rtos ]
+    networks: [rtos]
     depends_on:
       - order-service
       - inventory-service
       - notification-service
       - rabbitmq
+    restart: unless-stopped
 
   grafana:
     image: grafana/grafana:11.2.0
     container_name: dev-grafana
-    ports: [ "3000:3000" ]
+    ports: ["3000:3000"]
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
       - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./rtos-dashboard.json:/var/lib/grafana/dashboards/rtos-dashboard.json:ro
-    networks: [ rtos ]
+    networks: [rtos]
     depends_on:
       - prometheus
+    restart: unless-stopped
