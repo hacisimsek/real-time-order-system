@@ -115,4 +115,9 @@ public class AmqpConfig {
         f.setDefaultRequeueRejected(false);
         return f;
     }
+
+    @Bean
+    public org.springframework.amqp.rabbit.core.RabbitAdmin rabbitAdmin(org.springframework.amqp.rabbit.connection.ConnectionFactory cf) {
+        return new org.springframework.amqp.rabbit.core.RabbitAdmin(cf);
+    }
 }

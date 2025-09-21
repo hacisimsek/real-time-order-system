@@ -18,7 +18,7 @@ scrape_configs:
     static_configs:
       - targets: ['host.docker.internal:8083']
 
-  # (İsteğe bağlı) RabbitMQ Prometheus plugin'i açık ise:
-  # - job_name: 'rabbitmq'
-  #   static_configs:
-  #     - targets: ['host.docker.internal:15692']
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: [ 'host.docker.internal:15692' ]
+
