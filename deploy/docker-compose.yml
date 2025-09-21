@@ -35,17 +35,11 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: dev-rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-      - "15692:15692"
-    networks: [rtos]
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
+    ports: [ "5672:5672","15672:15672","15692:15692" ]
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbitmq_management load_definitions "/etc/rabbitmq/definitions.json"'
+    volumes:
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
 
   # ========= APP SERVICES =========
   order-service:
