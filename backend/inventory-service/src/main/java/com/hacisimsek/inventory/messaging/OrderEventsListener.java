@@ -1,6 +1,5 @@
 package com.hacisimsek.inventory.messaging;
 
-import com.hacisimsek.inventory.config.AmqpConfig;
 import com.hacisimsek.inventory.metrics.MetricsService;
 import com.hacisimsek.inventory.service.IdempotencyService;
 import com.hacisimsek.inventory.service.InventoryService;
@@ -8,30 +7,27 @@ import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
+
 @Component
 public class OrderEventsListener {
 
     private static final Logger log = LoggerFactory.getLogger(OrderEventsListener.class);
-    private static final int MAX_RETRIES = 3;
 
     private final InventoryService service;
     private final IdempotencyService idempotency;
-    private final RabbitTemplate rabbit;
-    private final com.hacisimsek.inventory.config.AmqpProps props;
     private final MetricsService metricsService;
 
-    public OrderEventsListener(InventoryService service , IdempotencyService idempotency , RabbitTemplate rabbit, com.hacisimsek.inventory.config.AmqpProps props , MetricsService metricsService) {
+    public OrderEventsListener(InventoryService service,
+                               IdempotencyService idempotency,
+                               MetricsService metricsService) {
         this.service = service;
         this.idempotency = idempotency;
-        this.rabbit = rabbit;
-        this.props = props;
         this.metricsService = metricsService;
     }
 
@@ -46,11 +42,12 @@ public class OrderEventsListener {
         try {
             idempotency.processOnce(effectiveId, () -> {
                 @SuppressWarnings("unchecked")
-                var items = (java.util.List<java.util.Map<String,Object>>) payload.get("items");
+                var items = (java.util.List<Map<String,Object>>) payload.get("items");
                 if (items != null) {
                     for (var it : items) {
                         String sku = String.valueOf(it.get("sku"));
-                        int qty = ((Number) it.get("qty")).intValue();
+                        Number n = (Number) it.get("qty");
+                        int qty = n == null ? 0 : n.intValue();
                         service.reserve(new com.hacisimsek.inventory.dto.ReserveRequest(sku, qty));
                     }
                 }
@@ -58,10 +55,9 @@ public class OrderEventsListener {
             metricsService.incProcessed("order.created");
             ch.basicAck(tag, false);
         } catch (Exception e) {
-            log.error("order.created failed (msgId={}, retries={})", effectiveId, retries, e);
-            handleFailure("order.created", payload, effectiveId, retries, tag, ch,
-                    props.routingKeys().orderCreated() + ".retry",
-                    props.routingKeys().orderCreated() + ".dlq");
+            log.error("order.created failed (msgId={}, retries={}), payload={}", effectiveId, retries, payload, e);
+            metricsService.incFailed("order.created", "exception");
+            ch.basicNack(tag, false, false);
         }
     }
 
@@ -76,7 +72,7 @@ public class OrderEventsListener {
         try {
             String status = String.valueOf(payload.get("status"));
             @SuppressWarnings("unchecked")
-            var items = (java.util.List<java.util.Map<String,Object>>) payload.get("items");
+            var items = (java.util.List<Map<String,Object>>) payload.get("items");
             if (items != null) {
                 switch (status) {
                     case "CANCELED" -> {
@@ -93,41 +89,15 @@ public class OrderEventsListener {
                             service.consume(sku, qty);
                         }
                     }
-                    default -> {}
+                    default -> { }
                 }
             }
             metricsService.incProcessed("order.status-changed");
             ch.basicAck(tag, false);
         } catch (Exception e) {
-            log.error("status-changed failed (msgId={}, retries={})", effectiveId, retries, e);
-            handleFailure("order.status-changed", payload, effectiveId, retries, tag, ch,
-                    props.routingKeys().orderStatusChanged() + ".retry",
-                    props.routingKeys().orderStatusChanged() + ".dlq");
-        }
-    }
-
-    private void handleFailure(String which, Map<String,Object> payload, String msgId, Integer retries, long tag, Channel ch, String retryRoutingKey, String dlqRoutingKey) throws Exception {
-        int attempt = retries == null ? 0 : retries;
-        String type = which.equals("order.created") ? "created" : "status_changed";
-        if (attempt < MAX_RETRIES) {
-            metricsService.incRetried(type);
-            int next = attempt + 1;
-            log.warn("Retrying {} (attempt {}/{}) messageId={}", which, next, MAX_RETRIES, msgId);
-            ch.basicAck(tag, false);
-            rabbit.convertAndSend(
-                    AmqpConfig.RETRY_EXCHANGE, retryRoutingKey, payload,
-                    m -> { m.getMessageProperties().setMessageId(msgId);
-                        m.getMessageProperties().setHeader("x-retries", next);
-                        return m; });
-        } else {
-            metricsService.incDlq(type);
-            log.error("Max retries exceeded for {} → send to DLQ, messageId={}", which, msgId);
-            ch.basicAck(tag, false);
-            rabbit.convertAndSend(
-                    AmqpConfig.DLX_EXCHANGE, dlqRoutingKey, payload,
-                    m -> { m.getMessageProperties().setMessageId(msgId);
-                        m.getMessageProperties().setHeader("x-retries", attempt);
-                        return m; });
+            log.error("order.status-changed failed (msgId={}, retries={}), payload={}", effectiveId, retries, payload, e);
+            metricsService.incFailed("order.status-changed", "exception");
+            ch.basicNack(tag, false, false);
         }
     }
 

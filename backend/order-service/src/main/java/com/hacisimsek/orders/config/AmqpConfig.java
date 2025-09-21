@@ -7,10 +7,18 @@ import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.amqp.core.TopicExchange;
 
 @Configuration
 @EnableConfigurationProperties(MessagingProps.class)
 public class AmqpConfig {
+
+    public static final String ORDER_EVENTS_EXCHANGE = "order.events";
+
+    @Bean
+    TopicExchange orderEventsExchange() {
+        return new TopicExchange(ORDER_EVENTS_EXCHANGE, true, false);
+    }
 
     @Bean
     TopicExchange orderExchange(MessagingProps props) {

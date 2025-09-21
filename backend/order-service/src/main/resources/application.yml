@@ -25,6 +25,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    table: flyway_schema_history_order
+    baseline-on-migrate: true
+    baseline-version: 0
 
   rabbitmq:
     host: ${RABBIT_HOST:localhost}
@@ -62,3 +65,7 @@ app:
     routing-keys:
       orderCreated: order.created.v1
       orderStatusChanged: order.status-changed.v1
+  security:
+    jwtSecret: ${JWT_SECRET:dev-change-this-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+    issuer: rtos
+    audience: rtos-clients

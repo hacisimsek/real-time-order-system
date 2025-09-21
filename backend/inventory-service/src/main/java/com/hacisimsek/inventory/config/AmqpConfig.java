@@ -120,4 +120,13 @@ public class AmqpConfig {
     public org.springframework.amqp.rabbit.core.RabbitAdmin rabbitAdmin(org.springframework.amqp.rabbit.connection.ConnectionFactory cf) {
         return new org.springframework.amqp.rabbit.core.RabbitAdmin(cf);
     }
+
+    @Bean Binding bindOrderCreatedMain(Queue orderCreatedQ, TopicExchange orderEvents, AmqpProps p){
+        return BindingBuilder.bind(orderCreatedQ).to(orderEvents).with(p.routingKeys().orderCreated());
+    }
+    @Bean Binding bindOrderStatusChangedMain(Queue orderStatusChangedQ, TopicExchange orderEvents, AmqpProps p){
+        return BindingBuilder.bind(orderStatusChangedQ).to(orderEvents).with(p.routingKeys().orderStatusChanged());
+    }
+
+    @Bean TopicExchange orderEvents(AmqpProps p){ return new TopicExchange(p.exchange(), true, false); }
 }

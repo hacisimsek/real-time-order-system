@@ -1,8 +1,9 @@
-version: "3.9"
-
 networks:
   rtos:
     driver: bridge
+
+volumes:
+  pgdata:
 
 services:
   # ========= INFRA =========
@@ -14,18 +15,22 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
     ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     networks: [rtos]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
       interval: 10s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     container_name: dev-redis
     ports: ["6379:6379"]
     networks: [rtos]
+    restart: unless-stopped
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -33,14 +38,14 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+      - "15692:15692"
     networks: [rtos]
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 5s
       retries: 10
-
-  # (Prometheus/Grafana/observability sende zaten vardı)
+    restart: unless-stopped
 
   # ========= APP SERVICES =========
   order-service:
@@ -51,20 +56,35 @@ services:
     container_name: order-service
     environment:
       PORT: 8081
+      # DB
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: appdb
       DB_USER: app
       DB_PASS: app
+      # Rabbit
       RABBIT_HOST: rabbitmq
       RABBIT_PORT: 5672
       RABBIT_USER: guest
       RABBIT_PASS: guest
+      SPRING_PROFILES_ACTIVE: dev
+      JWT_SECRET: ${JWT_SECRET:-change-me-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+      # (opsiyonel) JVM ayarları:
+      # JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:+UseG1GC"
     depends_on:
-      postgres: { condition: service_healthy }
-      rabbitmq: { condition: service_healthy }
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports: ["8081:8081"]
     networks: [rtos]
+    restart: unless-stopped
+
+    # Eğer outbox publisher kullanıyorsan logları görmek için:
+    # logging:
+    #   options:
+    #     max-size: "10m"
+    #     max-file: "3"
 
   notification-service:
     build:
@@ -78,10 +98,14 @@ services:
       RABBIT_PORT: 5672
       RABBIT_USER: guest
       RABBIT_PASS: guest
+      SPRING_PROFILES_ACTIVE: dev
+      JWT_SECRET: ${JWT_SECRET:-change-me-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
     depends_on:
-      rabbitmq: { condition: service_healthy }
+      rabbitmq:
+        condition: service_healthy
     ports: ["8082:8082"]
     networks: [rtos]
+    restart: unless-stopped
 
   inventory-service:
     build:
@@ -91,17 +115,56 @@ services:
     container_name: inventory-service
     environment:
       PORT: 8083
+      # DB
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: appdb
       DB_USER: app
       DB_PASS: app
+      # Rabbit
       RABBIT_HOST: rabbitmq
       RABBIT_PORT: 5672
       RABBIT_USER: guest
       RABBIT_PASS: guest
+      # Security / Profile
+      SPRING_PROFILES_ACTIVE: dev
+      JWT_SECRET: ${JWT_SECRET:-change-me-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
     depends_on:
-      postgres: { condition: service_healthy }
-      rabbitmq: { condition: service_healthy }
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports: ["8083:8083"]
     networks: [rtos]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: dev-prometheus
+    ports: [ "9090:9090" ]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-lifecycle
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+    networks: [ rtos ]
+    depends_on:
+      - order-service
+      - inventory-service
+      - notification-service
+      - rabbitmq
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: dev-grafana
+    ports: [ "3000:3000" ]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./rtos-dashboard.json:/var/lib/grafana/dashboards/rtos-dashboard.json:ro
+    networks: [ rtos ]
+    depends_on:
+      - prometheus
