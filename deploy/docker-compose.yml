@@ -1,62 +1,107 @@
 version: "3.9"
 
+networks:
+  rtos:
+    driver: bridge
+
 services:
+  # ========= INFRA =========
   postgres:
     image: postgres:16
     container_name: dev-postgres
     environment:
+      POSTGRES_DB: appdb
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
-      POSTGRES_DB: appdb
-    ports:
-      - "5432:5432"
+    ports: ["5432:5432"]
+    networks: [rtos]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
-      interval: 5s
+      interval: 10s
       timeout: 3s
       retries: 10
 
   redis:
     image: redis:7-alpine
     container_name: dev-redis
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+    ports: ["6379:6379"]
+    networks: [rtos]
 
   rabbitmq:
     image: rabbitmq:3-management
     container_name: dev-rabbitmq
     ports:
-      - "5672:5672"    # AMQP
-      - "15672:15672"  # Management UI
+      - "5672:5672"
+      - "15672:15672"
+    networks: [rtos]
     healthcheck:
-      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 10
 
-  prometheus:
-    image: prom/prometheus:v2.53.0
-    container_name: dev-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    restart: unless-stopped
+  # (Prometheus/Grafana/observability sende zaten vardı)
 
-  grafana:
-    image: grafana/grafana:10.4.5
-    container_name: dev-grafana
-    ports:
-      - "3000:3000"
+  # ========= APP SERVICES =========
+  order-service:
+    build:
+      context: ../backend/order-service
+      dockerfile: Dockerfile
+    image: rtos/order-service:dev
+    container_name: order-service
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - ./observability/grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
-      - ./observability/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
-      - ./observability:/var/lib/grafana/dashboards:ro
-    restart: unless-stopped
+      PORT: 8081
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: appdb
+      DB_USER: app
+      DB_PASS: app
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASS: guest
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports: ["8081:8081"]
+    networks: [rtos]
+
+  notification-service:
+    build:
+      context: ../backend/notification-service
+      dockerfile: Dockerfile
+    image: rtos/notification-service:dev
+    container_name: notification-service
+    environment:
+      PORT: 8082
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASS: guest
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+    ports: ["8082:8082"]
+    networks: [rtos]
+
+  inventory-service:
+    build:
+      context: ../backend/inventory-service
+      dockerfile: Dockerfile
+    image: rtos/inventory-service:dev
+    container_name: inventory-service
+    environment:
+      PORT: 8083
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: appdb
+      DB_USER: app
+      DB_PASS: app
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASS: guest
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports: ["8083:8083"]
+    networks: [rtos]
