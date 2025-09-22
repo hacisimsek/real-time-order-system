@@ -1,3 +1,5 @@
+version: "3.9"
+
 networks:
   rtos:
     driver: bridge
@@ -38,21 +40,23 @@ services:
     image: rabbitmq:3-management
     container_name: dev-rabbitmq
     env_file: ./.env
+    environment:
+      RABBITMQ_LOAD_DEFINITIONS: /etc/rabbitmq/definitions.json
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     ports:
       - "5672:5672"
       - "15672:15672"
       - "15692:15692"
-    environment:
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: '-rabbit vm_memory_high_watermark,0.8 -rabbitmq_management load_definitions "/etc/rabbitmq/definitions.json"'
     volumes:
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
-    networks: [rtos]
     healthcheck:
-      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running"]
+      test: [ "CMD-SHELL", "rabbitmq-diagnostics -q ping" ]
       interval: 10s
       timeout: 5s
+      start_period: 40s
       retries: 20
-      start_period: 30s
+    networks: [ rtos ]
     restart: unless-stopped
 
   # ========= APP SERVICES =========
@@ -64,17 +68,30 @@ services:
     container_name: order-service
     env_file: ./.env
     environment:
+      # App profile & HTTP
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       PORT: ${ORDER_HTTP_PORT}
+
+      # DB
       DB_HOST: ${POSTGRES_HOST}
       DB_PORT: ${POSTGRES_PORT}
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
+
+      # Rabbit — mevcut RABBIT_* değişkenlerin korunuyor
       RABBIT_HOST: ${RABBIT_HOST}
       RABBIT_PORT: ${RABBIT_PORT}
       RABBIT_USER: ${RABBIT_USER}
       RABBIT_PASS: ${RABBIT_PASS}
+
+      # Spring tarafı SPRING_RABBITMQ_* okuyorsa yedek olarak veriyoruz
+      SPRING_RABBITMQ_HOST: ${RABBIT_HOST}
+      SPRING_RABBITMQ_PORT: ${RABBIT_PORT}
+      SPRING_RABBITMQ_USERNAME: ${RABBIT_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBIT_PASS}
+
+      # Auth
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       postgres: { condition: service_healthy }
@@ -93,10 +110,19 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       PORT: ${NOTIFICATION_HTTP_PORT}
+
+      # Rabbit
       RABBIT_HOST: ${RABBIT_HOST}
       RABBIT_PORT: ${RABBIT_PORT}
       RABBIT_USER: ${RABBIT_USER}
       RABBIT_PASS: ${RABBIT_PASS}
+
+      SPRING_RABBITMQ_HOST: ${RABBIT_HOST}
+      SPRING_RABBITMQ_PORT: ${RABBIT_PORT}
+      SPRING_RABBITMQ_USERNAME: ${RABBIT_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBIT_PASS}
+
+      # Auth
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       rabbitmq: { condition: service_healthy }
@@ -114,15 +140,26 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       PORT: ${INVENTORY_HTTP_PORT}
+
+      # DB
       DB_HOST: ${POSTGRES_HOST}
       DB_PORT: ${POSTGRES_PORT}
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
+
+      # Rabbit
       RABBIT_HOST: ${RABBIT_HOST}
       RABBIT_PORT: ${RABBIT_PORT}
       RABBIT_USER: ${RABBIT_USER}
       RABBIT_PASS: ${RABBIT_PASS}
+
+      SPRING_RABBITMQ_HOST: ${RABBIT_HOST}
+      SPRING_RABBITMQ_PORT: ${RABBIT_PORT}
+      SPRING_RABBITMQ_USERNAME: ${RABBIT_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBIT_PASS}
+
+      # Auth
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       postgres: { condition: service_healthy }
@@ -131,6 +168,7 @@ services:
     networks: [rtos]
     restart: unless-stopped
 
+  # ========= OBSERVABILITY =========
   prometheus:
     image: prom/prometheus:v2.55.1
     container_name: dev-prometheus
@@ -152,14 +190,18 @@ services:
   grafana:
     image: grafana/grafana:11.2.0
     container_name: dev-grafana
-    ports: ["3000:3000"]
+    ports: [ "3000:3000" ]
     environment:
+      GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_DEFAULT_THEME: dark
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
     volumes:
-      - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
-      - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+      - ./observability/grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
+      - ./observability/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/rtos-provider.yml:ro
       - ./rtos-dashboard.json:/var/lib/grafana/dashboards/rtos-dashboard.json:ro
-    networks: [rtos]
+    networks: [ rtos ]
     depends_on:
       - prometheus
     restart: unless-stopped
+
