@@ -69,6 +69,13 @@ The solution will adopt an **event-driven design** that encompasses supporting i
 - JWT-based authentication
 - RBAC for user roles and permissions
 - API Gateway security enforcement (rate limiting, validation)
+- **Execution Plan**
+  - Requirements & Gap Analysis: catalogue protected endpoints, role matrix, and inter-service trust boundaries.
+  - Shared Auth Package: implement reusable JWT verification module and rotation strategy.
+  - Order-Service Hardening: add Spring Security guards and controller-level authorization policies.
+  - Notification & Inventory Hardening: align authentication middleware and tighten management endpoints.
+  - API Gateway Policies: enforce rate limiting, TLS termination, and secure defaults (CORS, headers).
+  - Security Testing: automate JWT scope tests, dependency scans, and document incident response runbooks.
 
 #### 5. Reporting Service – Nov 22 – Dec 5, 2025 (2 Weeks)
 - Reporting (daily, weekly, monthly)

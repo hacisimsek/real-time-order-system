@@ -20,7 +20,7 @@ COPY --from=build /app/target/*.jar app.jar
 
 # Healthcheck -> Spring actuator
 HEALTHCHECK --interval=15s --timeout=3s --start-period=25s \
-  CMD wget -qO- http://localhost:8080/actuator/health | grep '"status":"UP"' || exit 1
+  CMD sh -c "wget -qO- http://localhost:${PORT:-8081}/actuator/health | grep '\"status\":\"UP\"'"
 
 # Not: Spring portlarını application.yml belirliyor (8081/8082/8083)
 ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]

@@ -1,6 +1,5 @@
 package com.hacisimsek.orders.config;
 
-import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -13,28 +12,9 @@ import org.springframework.amqp.core.TopicExchange;
 @EnableConfigurationProperties(MessagingProps.class)
 public class AmqpConfig {
 
-    public static final String ORDER_EVENTS_EXCHANGE = "order.events";
-
     @Bean
-    TopicExchange orderEventsExchange() {
-        return new TopicExchange(ORDER_EVENTS_EXCHANGE, true, false);
-    }
-
-    @Bean
-    TopicExchange orderExchange(MessagingProps props) {
+    TopicExchange orderEventsExchange(MessagingProps props) {
         return new TopicExchange(props.exchange(), true, false);
-    }
-
-    @Bean
-    Queue orderCreatedQueue(MessagingProps props) {
-        return QueueBuilder.durable(props.queues().orderCreated()).build();
-    }
-
-    @Bean
-    Binding bindOrderCreated(Queue orderCreatedQueue, TopicExchange orderExchange, MessagingProps props) {
-        return BindingBuilder.bind(orderCreatedQueue)
-                .to(orderExchange)
-                .with(props.routingKeys().orderCreated());
     }
 
     @Bean
