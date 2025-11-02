@@ -12,10 +12,7 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with: { distribution: 'temurin', java-version: '17', cache: 'maven' }
-      - name: Build all modules
-        run: |
-          mvn -q -DskipTests -f backend/order-service/pom.xml clean package
-          mvn -q -DskipTests -f backend/notification-service/pom.xml clean package
-          mvn -q -DskipTests -f backend/inventory-service/pom.xml clean package
+      - name: Build backend modules
+        run: mvn -q -DskipTests -f backend/pom.xml clean package
       - name: Run unit tests
         run: mvn -q -f backend/pom.xml test || true
