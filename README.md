@@ -1,362 +1,191 @@
-Real-Time Order System (RTOS)
+# Real-Time Order System (RTOS)
 
-Mikroservis tabanlı Gerçek Zamanlı Sipariş ve Envanter Yönetimi örneği.
-Servisler: Order, Inventory, Notification.
-Mesajlaşma: RabbitMQ. Veri tabanı: PostgreSQL. Gözlemlenebilirlik: Micrometer → Prometheus → Grafana.
+RTOS is a microservice-based reference implementation for processing customer orders in real time. The system demonstrates reliable event publication, resilient consumers, and observability using widely adopted open-source technologies.
 
-Hedef: İlk 2 haftada MVP akışı (Order → Event → Inventory/Notification), Docker ile lokal çalıştırma, temel metrikler, DLQ/Retry ve Outbox ile güvenilir yayın.
+## At a Glance
 
-İçindekiler
+- **Services**: Order (publish events), Inventory (reserve/release stock), Notification (mock notifications)
+- **Messaging**: RabbitMQ with retry and DLQ support
+- **Persistence**: PostgreSQL
+- **Caching / future work**: Redis
+- **Observability**: Micrometer → Prometheus → Grafana
+- **Reliability patterns**: Outbox pattern, manual acknowledgements, idempotency store, DLQ replay utility
 
-Mimari
+## Repository Layout
 
-Dizin Yapısı
-
-Ön Koşullar
-
-Hızlı Başlangıç (Docker Compose)
-
-Servisler & Portlar
-
-API Uçları (cURL Örnekleri)
-
-Mesajlaşma Topolojisi
-
-Outbox (Exactly-once Publish)
-
-Observability (Prometheus & Grafana)
-
-DLQ Yönetimi & Replay
-
-Konfigürasyon / Ortam Değişkenleri
-
-Build/Run (Opsiyonel: Makefile)
-
-Troubleshooting
-
-Lisans
-
-Mimari
-
-Order Service (8081): Sipariş CRUD + durum değişimi. Event’ler Outbox tablosuna yazılır, arka planda RabbitMQ’ya yayınlanır.
-
-Inventory Service (8083): order.created / order.status-changed event’lerini tüketir. Stok reserve/release yapar, DLQ/Retry destekli.
-
-Notification Service (8082): Order event’lerini tüketir (mock e-posta/SMS).
-
-Infra: PostgreSQL, RabbitMQ (management UI), Redis (ileride rate-limit veya cache için), Prometheus, Grafana.
-
-Akış (MVP):
-
-POST /orders → Order Created (DB) → Outbox → RabbitMQ (order.events)
-→ Notification (consume & log)
-→ Inventory (reserve/release)
-
-Dizin Yapısı
+```
 real-time-order-system/
 ├─ backend/
 │  ├─ order-service/
-│  │  ├─ src/...
-│  │  ├─ pom.xml
-│  │  ├─ Dockerfile
-│  │  └─ .dockerignore
 │  ├─ inventory-service/
-│  │  ├─ src/...
-│  │  ├─ pom.xml
-│  │  ├─ Dockerfile
-│  │  └─ .dockerignore
 │  └─ notification-service/
-│     ├─ src/...
-│     ├─ pom.xml
-│     ├─ Dockerfile
-│     └─ .dockerignore
 ├─ deploy/
 │  ├─ docker-compose.yml
 │  └─ observability/
-│     ├─ prometheus.yml
-│     ├─ grafana-datasource.yml
-│     ├─ grafana-dashboards.yml
-│     └─ rtos-dashboard.json
-└─ README.md
+└─ docs/
+```
 
-Ön Koşullar
+## Prerequisites
 
-Java 17 (Oracle/OpenJDK)
+- Java 17 (JDK)
+- Maven ≥ 3.9.9 (wrapper is included, but local Maven is useful)
+- Docker Desktop with Compose v2
+- Optional: `jq` for pretty-printing JSON
 
-Maven ≥ 3.9.9
-
-Docker & Docker Compose v2
-
-(Opsiyonel) jq (CLI JSON güzelleştirici)
-
-Doğrulama:
-
+```bash
 java -version
-mvn -v
-docker -v && docker compose version
+mvn -v            # optional, wrapper is provided
+docker -v
+docker compose version
+```
 
-Hızlı Başlangıç (Docker Compose)
+## Quick Start
 
-İlk çalıştırmada sadece infra + servisler yeterli.
+1. **Clone and enter the project**
+   ```bash
+   git clone git@github.com:hacisimsek/real-time-order-system.git
+   cd real-time-order-system
+   ```
 
-cd deploy
-docker compose up -d postgres redis rabbitmq
-docker compose build order-service notification-service inventory-service
-docker compose up -d order-service notification-service inventory-service
+2. **Start infrastructure services (Postgres, Redis, RabbitMQ)**
+   ```bash
+   cd deploy
+   docker compose up -d postgres redis rabbitmq
+   ```
+   Credentials are defined in `deploy/.env`:
+   - Postgres: `app` / `app`, database `appdb`
+   - RabbitMQ: `rtos` / `rtos`
 
+3. **Build and start application services**
+   ```bash
+   docker compose build order-service notification-service inventory-service
+   docker compose up -d order-service notification-service inventory-service
+   ```
 
-Sağlık kontrolleri:
+4. **Check health endpoints**
+   ```bash
+   curl -s http://localhost:8081/actuator/health
+   curl -s http://localhost:8082/actuator/health
+   curl -s http://localhost:8083/actuator/health
+   ```
 
-curl -s localhost:8081/actuator/health
-curl -s localhost:8082/actuator/health
-curl -s localhost:8083/actuator/health
+5. **Fetch the developer JWT token** (printed on startup)
+   ```bash
+   docker compose logs order-service | grep "DEV ADMIN TOKEN"
+   ```
+   Use the returned `Bearer ...` token in `Authorization` headers when calling protected endpoints.
 
+6. **(Optional) Run service tests using the Maven wrapper**  
+   The wrapper downloads Maven into the project directory; the `HOME` export keeps the cache local.
+   ```bash
+   cd ../backend/order-service
+   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) ./mvnw -q test
 
-RabbitMQ UI: http://localhost:15672
-(guest/guest)
-Prometheus: http://localhost:9090/targets
+   cd ../notification-service
+   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) ./mvnw -q test
 
-Grafana: http://localhost:3000
-(admin/admin)
+   cd ../inventory-service
+   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) ./mvnw -q test
+   ```
 
-Compose version: uyarısı görürsen dosyadaki version: satırını sil.
+7. **Manual end-to-end smoke test**
+   ```bash
+   # Seed inventory
+   curl -s -X PUT http://localhost:8083/inventory/ABC-001/adjust \
+     -H 'Content-Type: application/json' \
+     -d '{"delta": 20, "reason": "seed"}'
 
-Servisler & Portlar
-Servis	Port	Açıklama
-Order	8081	Sipariş API + Outbox
-Notification	8082	Event consumer (mock)
-Inventory	8083	Stok görüntüleme/rezervasyon
-PostgreSQL	5432	appdb (user/pass: app)
-RabbitMQ	5672 / 15672	AMQP / Management UI
-Prometheus	9090	Metrics
-Grafana	3000	Dashboard
-API Uçları (cURL Örnekleri)
-Inventory seed (başlangıç stoğu)
-curl -s -X PUT localhost:8083/inventory/ABC-001/adjust \
--H 'Content-Type: application/json' -d '{ "delta": 20, "reason": "seed" }' | jq
-curl -s -X PUT localhost:8083/inventory/XYZ-123/adjust \
--H 'Content-Type: application/json' -d '{ "delta": 10, "reason": "seed" }' | jq
+   # Create an order
+   curl -s -X POST http://localhost:8081/orders \
+     -H 'Content-Type: application/json' \
+     -H 'Authorization: Bearer <DEV_TOKEN>' \
+     -d '{"customerId":"C-1001","amountCents":1999,"currency":"TRY","items":[{"sku":"ABC-001","qty":1}]}'
 
-Sipariş oluştur
-curl -s localhost:8081/orders -H 'Content-Type: application/json' -d '{
-"customerId":"C-9001","amountCents":1999,"currency":"TRY",
-"items":[{"sku":"ABC-001","qty":1}]
-}' | jq
+   # Update the order status
+   curl -s -X PATCH http://localhost:8081/orders/1/status \
+     -H 'Content-Type: application/json' \
+     -H 'Authorization: Bearer <DEV_TOKEN>' \
+     -d '{"status":"FULFILLED"}'
 
-Sipariş durumu değiştir (CONFIRMED / FULFILLED / CANCELED)
-curl -s -X PATCH localhost:8081/orders/64/status \
--H 'Content-Type: application/json' -d '{ "status": "FULFILLED" }' | jq
+   # Inspect inventory levels
+   curl -s http://localhost:8083/inventory/ABC-001
+   ```
 
-Stok görüntüle
-curl -s localhost:8083/inventory/ABC-001 | jq
+8. **Shut everything down**
+   ```bash
+   cd deploy
+   docker compose down
+   ```
 
+> Docker Compose v2 ignores the legacy `version` key and may show a warning. It is safe to ignore or remove the `version` line if desired.
 
-Postman collection & environment dosyaları (opsiyonel) deploy/ ya da doc/ altında tutulabilir.
+## Services & Ports
 
-Mesajlaşma Topolojisi
+| Service             | Port | Description                               |
+|---------------------|------|-------------------------------------------|
+| Order Service       | 8081 | Order API + outbox publisher              |
+| Notification Service| 8082 | Event consumer (mock notifications)       |
+| Inventory Service   | 8083 | Stock reserve/release API + consumers     |
+| PostgreSQL          | 5432 | Primary database `appdb`                  |
+| RabbitMQ            | 5672 | AMQP broker (UI on 15672)                 |
+| Prometheus          | 9090 | Metrics scraper                           |
+| Grafana             | 3000 | Dashboards (default login `admin/admin`)  |
 
-Exchange: order.events (topic)
+## Messaging Topology
 
-Routing keys:
+- **Exchange**: `order.events` (topic)
+- **Routing keys**:
+  - `order.created.v1`
+  - `order.status-changed.v1`
+- **Queues**:
+  - Inventory: `dev.inventory.order-created`, `dev.inventory.order-status-changed`
+  - Notification: `dev.notifications.order-created`, `dev.notifications.order-status-changed`
+- **Retry / DLQ**:
+  - `<queue>.retry` routes messages back to the main exchange after TTL
+  - `<queue>.dlq` stores dead-lettered messages
+- **DLQ Replay**: Inventory service exposes a `DlqReplayer` helper to move messages from the DLQ to retry queues.
 
-order.created.v1
+## Outbox Pattern (Exactly-once Publish)
 
-order.status-changed.v1
+The order service writes business events to the `outbox_events` table during the same transaction as the domain change.  
+A background publisher drains the table and emits events to RabbitMQ, ensuring:
 
-Queue’lar:
+- No message is published if the database transaction rolls back
+- Failed publish attempts can be retried without losing the original payload
+- Operational visibility into outstanding events
 
-Inventory: dev.inventory.order-created, dev.inventory.order-status-changed
+Schema excerpt:
 
-Notification: dev.notifications.order-created, dev.notifications.order-status-changed
-
-Retry / DLQ:
-
-<queue>.retry (TTL → exchange’e geri döner)
-
-<queue>.dlq (dead-letter queue)
-
-Outbox (Exactly-once Publish)
-
-Order Service event’leri önce outbox_events tablosuna yazar, arka plandaki publisher batch olarak RabbitMQ’ya gönderir.
-Kısa şema:
-
-CREATE TABLE outbox_events(
-id bigserial primary key,
-aggregate_id bigint not null,
-type varchar(64) not null,
-payload jsonb not null,
-status varchar(16) not null default 'PENDING',
-attempts int not null default 0,
-created_at timestamptz not null default now(),
-last_error text
+```sql
+CREATE TABLE outbox_events (
+  id          BIGSERIAL PRIMARY KEY,
+  aggregate_id BIGINT NOT NULL,
+  type        VARCHAR(64) NOT NULL,
+  payload     JSONB NOT NULL,
+  status      VARCHAR(16) NOT NULL DEFAULT 'PENDING',
+  attempts    INT NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_error  TEXT
 );
 CREATE UNIQUE INDEX ux_outbox_agg_type ON outbox_events(aggregate_id, type);
+```
 
+## Observability
 
-Test:
+- Micrometer exports metrics to Prometheus; sample endpoint: `http://localhost:8081/actuator/prometheus`
+- Grafana dashboards are provisioned via files under `deploy/observability/`
+- RabbitMQ management UI: `http://localhost:15672` (user `rtos`, password `rtos`)
 
-# (opsiyonel) RabbitMQ'yu kapat → outbox PENDING kalır
-cd deploy && docker compose stop rabbitmq
+## Configuration
 
-curl -s localhost:8081/orders -H 'Content-Type: application/json' -d '{
-"customerId":"C-OBX","amountCents":2500,"currency":"TRY",
-"items":[{"sku":"ABC-001","qty":1}]
-}' | jq
+- Base environment resides in `deploy/.env`
+- Service-level configuration lives in each service’s `application.yml`
+- JWT secret, database connection details, and messaging topology can be overridden via environment variables
 
-docker exec -it dev-postgres psql -U app -d appdb -c \
-"SELECT status, count(*) FROM outbox_events GROUP BY status;"
+## Troubleshooting
 
-# RabbitMQ'yu aç → publisher PUBLISHED yapar
-docker compose start rabbitmq
-sleep 3
-docker exec -it dev-postgres psql -U app -d appdb -c \
-"SELECT status, count(*) FROM outbox_events GROUP BY status;"
+- **Cannot connect to RabbitMQ**: Ensure docker-compose has started the `rabbitmq` service and ports 5672/15672 are available.
+- **Maven wrapper cannot download**: Make sure Docker Desktop has network access; the wrapper stores artifacts in the project directory if `HOME` is set accordingly.
+- **Health checks failing in Docker**: Containers rely on the `/actuator/health` endpoint. Review service logs with `docker compose logs <service>` for details.
 
-Observability (Prometheus & Grafana)
-
-Micrometer metrikleri:
-
-HTTP: http_server_requests_seconds_*
-
-JVM: jvm_*
-
-İş metrikleri:
-
-Order publish: order_events_published_total, order_events_publish_failed_total
-
-Inventory consumer: inventory_messages_processed_total, ..._retried_total, ..._dlq_total
-
-Prometheus & Grafana Compose ile açılır (opsiyonel).
-
-Dashboard: deploy/observability/rtos-dashboard.json
-Başlıca paneller:
-
-Publish OK/FAIL (Order)
-
-Inventory Processed/Retry/DLQ
-
-HTTP p95 (Inventory/Notification)
-
-JVM memory & threads
-
-HTTP p95 panellerinde actuator istekleri filtrelidir: uri!~"/actuator/.*"
-
-DLQ Yönetimi & Replay
-
-Hatalı SKU gibi durumlarda mesajlar DLQ’ya düşer. Inventory servisinde ops endpoint ile DLQ → retry taşıma yapılabilir:
-
-# Hatalı siparişler gönder
-for i in {1..3}; do
-curl -s localhost:8081/orders -H 'Content-Type: application/json' -d "{
-\"customerId\":\"C-ERR\",\"amountCents\":1999,\"currency\":\"TRY\",
-\"items\":[{\"sku\":\"NO-SUCH-$i\",\"qty\":1}]
-}" >/dev/null
-done
-
-# DLQ sayısı kontrol
-docker exec -it dev-rabbitmq rabbitmqadmin list queues name messages
-
-# Replay (DLQ → retry)
-curl -s -X POST "http://localhost:8083/ops/replay/dev.inventory.order-created.dlq?max=100" | jq
-
-
-Retry kuyruklarında TTL süresi dolunca mesajlar tekrar işlenmek üzere ana exchange’e döner.
-
-Konfigürasyon / Ortam Değişkenleri
-
-Tüm servisler application.yml içinde environment override destekler:
-
-server:
-port: ${PORT:808x}
-
-spring:
-datasource:
-url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:appdb}
-username: ${DB_USER:app}
-password: ${DB_PASS:app}
-rabbitmq:
-host: ${RABBIT_HOST:localhost}
-port: ${RABBIT_PORT:5672}
-username: ${RABBIT_USER:guest}
-password: ${RABBIT_PASS:guest}
-
-management:
-endpoints.web.exposure.include: "health,info,prometheus"
-
-
-Flyway (Inventory): İlk kurulumda boş olmayan şemada tablo yok hatası için:
-
-spring:
-flyway:
-baseline-on-migrate: true
-baseline-version: 0
-table: flyway_schema_history_inventory
-
-Build/Run (Opsiyonel: Makefile)
-
-İstersen köke aşağıdaki Makefile ile kısayol komutları ekleyebilirsin:
-
-SHELL := /bin/sh
-.RECIPEPREFIX := >
-DC := $(shell command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "docker-compose")
-
-.PHONY: infra up rebuild down ps logs tail
-
-infra:
-> cd deploy && $(DC) up -d postgres redis rabbitmq
-
-up:
-> cd deploy && $(DC) up -d order-service notification-service inventory-service
-
-rebuild:
-> cd deploy && $(DC) build order-service notification-service inventory-service
-
-down:
-> cd deploy && $(DC) down
-
-ps:
-> cd deploy && $(DC) ps
-
-logs:
-> cd deploy && $(DC) logs --no-color --timestamps --tail=200
-
-tail:
-> cd deploy && $(DC) logs -f
-
-
-Kullanım:
-
-make infra
-make rebuild
-make up
-
-
-Make istemezsen doğrudan docker compose ... komutlarını kullanman yeterli.
-
-Troubleshooting
-
-version is obsolete (Compose uyarısı)
-deploy/docker-compose.yml içindeki version: satırını kaldır.
-
-Servis UP ama DB hatası
-depends_on: { condition: service_healthy } var; yine de ilk seferde postgres hazır olmadan bağlanmaya çalıştıysan tüm servisleri restart et:
-
-cd deploy && docker compose up -d --force-recreate order-service inventory-service notification-service
-
-
-Flyway: “Found non-empty schema but no schema history table”
-Inventory’de baseline-on-migrate: true kullan (yukarıdaki örnek).
-
-Grafana’da “No data”
-PromQL’lere or vector(0) ekledik. Yine boşsa ilgili servise gerçek trafik üret (ör. /orders, /inventory/...).
-
-RabbitMQ DLQ temizleme
-
-docker exec -it dev-rabbitmq rabbitmqadmin purge queue name=dev.inventory.order-created.dlq
-
-Lisans
-
-Eğitim ve demo amaçlı örnek proje. Kurumsal kullanımlar için güvenlik, kimlik doğrulama, şema yönetimi ve HA/DR gereksinimleri ayrıca ele alınmalıdır.
-
-
-Not: README’deki cURL’ler lokal Docker Compose kurulumunu hedefler. Kubernetes/CI/CD, Outbox temizliği (arşivleme), Gateway & Rate limiting gibi ileri adımları bir sonraki sprintte ekleyebiliriz.
+Happy hacking!
