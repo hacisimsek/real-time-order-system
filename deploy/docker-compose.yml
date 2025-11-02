@@ -62,8 +62,8 @@ services:
   # ========= APP SERVICES =========
   order-service:
     build:
-      context: ../backend/order-service
-      dockerfile: Dockerfile
+      context: ../backend
+      dockerfile: order-service/Dockerfile
     image: rtos/order-service:dev
     container_name: order-service
     env_file: ./.env
@@ -102,8 +102,8 @@ services:
 
   notification-service:
     build:
-      context: ../backend/notification-service
-      dockerfile: Dockerfile
+      context: ../backend
+      dockerfile: notification-service/Dockerfile
     image: rtos/notification-service:dev
     container_name: notification-service
     env_file: ./.env
@@ -132,8 +132,8 @@ services:
 
   inventory-service:
     build:
-      context: ../backend/inventory-service
-      dockerfile: Dockerfile
+      context: ../backend
+      dockerfile: inventory-service/Dockerfile
     image: rtos/inventory-service:dev
     container_name: inventory-service
     env_file: ./.env
@@ -204,4 +204,3 @@ services:
     depends_on:
       - prometheus
     restart: unless-stopped
-

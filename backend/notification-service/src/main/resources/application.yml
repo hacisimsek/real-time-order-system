@@ -30,3 +30,8 @@ app:
     dlq:
       orderCreated: dev.notifications.order-created.dlq
       orderStatusChanged: dev.notifications.order-status-changed.dlq
+  security:
+    issuer: rtos
+    audience: rtos-clients
+    secrets:
+      - ${JWT_SECRET:dev-change-this-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}

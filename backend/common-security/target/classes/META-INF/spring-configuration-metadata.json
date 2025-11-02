@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "name": "app.security",
+      "type": "com.hacisimsek.security.AppSecurityProperties",
+      "sourceType": "com.hacisimsek.security.AppSecurityProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "app.security.audience",
+      "type": "java.lang.String",
+      "sourceType": "com.hacisimsek.security.AppSecurityProperties"
+    },
+    {
+      "name": "app.security.clock-skew",
+      "type": "java.time.Duration",
+      "sourceType": "com.hacisimsek.security.AppSecurityProperties",
+      "defaultValue": "30s"
+    },
+    {
+      "name": "app.security.issuer",
+      "type": "java.lang.String",
+      "sourceType": "com.hacisimsek.security.AppSecurityProperties"
+    },
+    {
+      "name": "app.security.secrets",
+      "type": "java.util.List<java.lang.String>",
+      "description": "Ordered list of shared secrets (first item used for signing, all used for verification).",
+      "sourceType": "com.hacisimsek.security.AppSecurityProperties"
+    }
+  ],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}

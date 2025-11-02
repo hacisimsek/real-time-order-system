@@ -64,3 +64,8 @@ app:
     routing-keys:
       orderCreated: order.created.v1
       orderStatusChanged: order.status-changed.v1
+  security:
+    issuer: rtos
+    audience: rtos-clients
+    secrets:
+      - ${JWT_SECRET:dev-change-this-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}

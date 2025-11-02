@@ -1,18 +1,33 @@
 package com.hacisimsek.orders.security;
 
+import com.hacisimsek.security.JwtTokenIssuer;
+import com.hacisimsek.security.Roles;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+
+import java.time.Duration;
 import java.util.List;
 
 @Profile("dev")
 @Component
 public class DevTokenRunner implements CommandLineRunner {
-    private final JwtService jwt;
-    public DevTokenRunner(JwtService jwt){ this.jwt = jwt; }
+    private final JwtTokenIssuer issuer;
+    public DevTokenRunner(JwtTokenIssuer issuer){ this.issuer = issuer; }
 
     @Override public void run(String... args) {
-        String admin = jwt.generate("admin@rtos.local", List.of("ROLE_ADMIN"), 3600);
+        String admin = issuer.issue(
+                "admin@rtos.local",
+                List.of(
+                        Roles.ORDER_READ,
+                        Roles.ORDER_WRITE,
+                        Roles.INVENTORY_READ,
+                        Roles.INVENTORY_WRITE,
+                        Roles.INVENTORY_OPS,
+                        Roles.NOTIFICATION_READ
+                ),
+                Duration.ofHours(1)
+        );
         System.out.println("DEV ADMIN TOKEN (1h): Bearer " + admin);
     }
 }

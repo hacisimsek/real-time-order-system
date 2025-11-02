@@ -76,16 +76,19 @@ docker compose version
    Use the returned `Bearer ...` token in `Authorization` headers when calling protected endpoints.
 
 6. **(Optional) Run service tests using the Maven wrapper**  
-   The wrapper downloads Maven into the project directory; the `HOME` export keeps the cache local.
+   Install the shared security library once, then execute each service’s suite. The `HOME` export keeps Maven’s cache inside the repo.
    ```bash
-   cd ../backend/order-service
-   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) ./mvnw -q test
+   # from the repo root
+   backend/order-service/mvnw -q -f ../common-security/pom.xml install
 
-   cd ../notification-service
-   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) ./mvnw -q test
+   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) \
+     backend/order-service/mvnw -q test
 
-   cd ../inventory-service
-   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) ./mvnw -q test
+   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) \
+     backend/notification-service/mvnw -q test
+
+   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) \
+     backend/inventory-service/mvnw -q test
    ```
 
 7. **Manual end-to-end smoke test**
@@ -130,6 +133,23 @@ docker compose version
 | RabbitMQ            | 5672 | AMQP broker (UI on 15672)                 |
 | Prometheus          | 9090 | Metrics scraper                           |
 | Grafana             | 3000 | Dashboards (default login `admin/admin`)  |
+
+## Security
+
+- All HTTP endpoints (except `actuator/**`) require a JWT Bearer token.
+- Tokens are validated in every service using shared key rotation support (see `backend/common-security`).
+- Default developer token (printed on startup in `dev` profile) carries the following authorities:
+
+| Authority                 | Purpose                                        |
+|---------------------------|------------------------------------------------|
+| `ROLE_ORDER_READ`         | Fetch order details                            |
+| `ROLE_ORDER_WRITE`        | Create orders and change order status          |
+| `ROLE_INVENTORY_READ`     | Read inventory levels                          |
+| `ROLE_INVENTORY_WRITE`    | Adjust/reserve/release/consume inventory       |
+| `ROLE_INVENTORY_OPS`      | Trigger DLQ replay endpoints                   |
+| `ROLE_NOTIFICATION_READ`  | Access notification-service protected routes   |
+
+Refresh or rotate JWT secrets by updating `app.security.secrets` in each service configuration; the first entry is used for signing, subsequent entries remain valid for verification during rollovers.
 
 ## Messaging Topology
 
