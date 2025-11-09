@@ -53,6 +53,9 @@ class OrderSecurityTests {
     @MockBean
     OrderService orderService;
 
+    @MockBean
+    com.hacisimsek.orders.repository.OutboxEventRepository outboxEventRepository;
+
     @Test
     void createOrderWithoutTokenShouldFail() throws Exception {
         mvc.perform(post("/orders")

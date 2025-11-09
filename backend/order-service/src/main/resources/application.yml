@@ -65,6 +65,10 @@ app:
     routing-keys:
       orderCreated: order.created.v1
       orderStatusChanged: order.status-changed.v1
+  outbox:
+    poll-interval: 1s
+    batch-size: 50
+    max-attempts: 5
   security:
     issuer: rtos
     audience: rtos-clients
