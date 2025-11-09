@@ -71,7 +71,7 @@ graph LR
    ```
 5. **Metrics & dashboards**
    - Prometheus: http://localhost:9090
-   - Grafana: http://localhost:3000 (admin / admin)
+   - Grafana: http://localhost:3000 (credentials from `GF_SECURITY_ADMIN_USER/PASSWORD` in `deploy/docker-compose.yml`, default `admin` / `admin`)
      - Import dashboards auto-provisioned (`rtos-dashboard` + `reporting-overview`).
    - Reporting metrics: `curl -s http://localhost:8084/actuator/prometheus | head`
 6. **Tear down**

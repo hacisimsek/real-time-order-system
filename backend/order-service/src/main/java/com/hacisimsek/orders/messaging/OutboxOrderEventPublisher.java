@@ -8,11 +8,15 @@ import com.hacisimsek.orders.repository.OutboxEventRepository;
 import com.hacisimsek.orders.domain.OrderStatus;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class OutboxOrderEventPublisher implements OrderEventPublisher {
+
+    private static final Logger log = LoggerFactory.getLogger(OutboxOrderEventPublisher.class);
 
     private final OutboxEventRepository repository;
     private final ObjectMapper objectMapper;
@@ -43,6 +47,7 @@ public class OutboxOrderEventPublisher implements OrderEventPublisher {
                 messagingProps.exchange(),
                 messagingProps.routingKeys().orderCreated(),
                 payload);
+        log.debug("Enqueued order.created event {}", eventId);
     }
 
     @Override
@@ -60,6 +65,7 @@ public class OutboxOrderEventPublisher implements OrderEventPublisher {
                 messagingProps.exchange(),
                 messagingProps.routingKeys().orderStatusChanged(),
                 payload);
+        log.debug("Enqueued order.status-changed event {}", eventId);
     }
 
     private void persist(String eventId,

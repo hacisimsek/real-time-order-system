@@ -1,0 +1,300 @@
+{
+  "info": {
+    "name": "Real-Time Order System",
+    "_postman_id": "f1a76994-1b0c-49d0-8ef7-7e88b1d9c2d4",
+    "description": "Manual test suite for the RTOS demo stack. Most requests require the DEV ADMIN TOKEN (paste into the `dev_token` environment variable).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{dev_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "description": "Quick readiness checks for each service.",
+      "item": [
+        {
+          "name": "Order Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{order_base_url}}/actuator/health",
+              "host": [
+                "{{order_base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Notification Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{notification_base_url}}/actuator/health",
+              "host": [
+                "{{notification_base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Inventory Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base_url}}/actuator/health",
+              "host": [
+                "{{inventory_base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reporting Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base_url}}/actuator/health",
+              "host": [
+                "{{reporting_base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "description": "Seed and inspect stock levels.",
+      "item": [
+        {
+          "name": "Adjust Inventory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": 20,\n  \"reason\": \"seed\"\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base_url}}/inventory/{{inventory_sku}}/adjust",
+              "host": [
+                "{{inventory_base_url}}"
+              ],
+              "path": [
+                "inventory",
+                "{{inventory_sku}}",
+                "adjust"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Inventory Item",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base_url}}/inventory/{{inventory_sku}}",
+              "host": [
+                "{{inventory_base_url}}"
+              ],
+              "path": [
+                "inventory",
+                "{{inventory_sku}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "Create, inspect, and update orders via the public API.",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customer_id}}\",\n  \"amountCents\": {{order_amount_cents}},\n  \"currency\": \"{{order_currency}}\",\n  \"items\": [\n    {\n      \"sku\": \"{{inventory_sku}}\",\n      \"qty\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{order_base_url}}/orders",
+              "host": [
+                "{{order_base_url}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{order_base_url}}/orders/{{order_id}}",
+              "host": [
+                "{{order_base_url}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"{{order_status}}\"\n}"
+            },
+            "url": {
+              "raw": "{{order_base_url}}/orders/{{order_id}}/status",
+              "host": [
+                "{{order_base_url}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reporting",
+      "description": "Read reporting snapshots and aggregates.",
+      "item": [
+        {
+          "name": "List Orders Snapshot",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base_url}}/reports/orders?period={{reporting_period}}&refresh=true",
+              "host": [
+                "{{reporting_base_url}}"
+              ],
+              "path": [
+                "reports",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{reporting_period}}"
+                },
+                {
+                  "key": "refresh",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Order Totals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base_url}}/reports/orders/totals?period={{reporting_period}}",
+              "host": [
+                "{{reporting_base_url}}"
+              ],
+              "path": [
+                "reports",
+                "orders",
+                "totals"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{reporting_period}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base_url}}/reports/orders/top-customers?limit={{top_customers_limit}}",
+              "host": [
+                "{{reporting_base_url}}"
+              ],
+              "path": [
+                "reports",
+                "orders",
+                "top-customers"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{top_customers_limit}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

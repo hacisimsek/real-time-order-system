@@ -24,7 +24,9 @@ public class DevTokenRunner implements CommandLineRunner {
                         Roles.INVENTORY_READ,
                         Roles.INVENTORY_WRITE,
                         Roles.INVENTORY_OPS,
-                        Roles.NOTIFICATION_READ
+                        Roles.NOTIFICATION_READ,
+                        Roles.REPORTING_READ,
+                        Roles.REPORTING_EXPORT
                 ),
                 Duration.ofHours(1)
         );

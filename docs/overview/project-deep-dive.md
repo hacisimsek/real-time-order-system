@@ -114,7 +114,7 @@ flowchart LR
 2. `docker compose build order-service ... reporting-service`
 3. `docker compose up -d order-service ... reporting-service`
 4. Aktiflik kontrolü: `curl http://localhost:8084/actuator/health`
-5. Grafana: `http://localhost:3000` (admin/admin), “Reporting Overview” dashboard’u.
+5. Grafana: `http://localhost:3000` (şifre `GF_SECURITY_ADMIN_*` değişkenleriyle tanımlanır; varsayılan `admin`/`admin`), “Reporting Overview” dashboard’u.
 6. Prometheus alertleri: `http://localhost:9090/alerts`.
 
 ### 6.2 IntelliJ/Spring Boot Run

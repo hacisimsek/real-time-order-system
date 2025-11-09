@@ -3,6 +3,8 @@ package com.hacisimsek.orders.domain;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "outbox_events")
@@ -30,8 +32,8 @@ public class OutboxEvent {
     @Column(name = "routing_key", nullable = false, length = 128)
     private String routingKey;
 
-    @Lob
     @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String payload;
 
     @Enumerated(EnumType.STRING)

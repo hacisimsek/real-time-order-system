@@ -16,6 +16,11 @@ docker compose logs order-service | grep "DEV ADMIN TOKEN"
 ```
 Copy the `Bearer …` token (valid for 1 hour). Use it as `<DEV_TOKEN>` below.
 
+### Optional: Use the Postman Collection
+- Import `docs/testing/postman/rtos.postman_collection.json` plus the `docs/testing/postman/rtos-local.postman_environment.json` environment.
+- In Postman, select the **RTOS Local** environment, paste the raw token (without `Bearer `) into the `dev_token` variable, and run the requests in order (Health → Inventory → Orders → Reporting).
+- The collection mirrors the curl steps below, so you can iterate quickly without retyping headers. The generated dev token now includes reporting roles, so the same token works for `/reports/**` calls.
+
 ## 3. Seed Inventory
 ```bash
 curl -s -X PUT http://localhost:8083/inventory/ABC-001/adjust \

@@ -15,8 +15,7 @@
     {
       "name": "app.security.clock-skew",
       "type": "java.time.Duration",
-      "sourceType": "com.hacisimsek.security.AppSecurityProperties",
-      "defaultValue": "30s"
+      "sourceType": "com.hacisimsek.security.AppSecurityProperties"
     },
     {
       "name": "app.security.issuer",

@@ -9,8 +9,6 @@ import com.hacisimsek.orders.messaging.OrderEventPublisher;
 import com.hacisimsek.orders.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class OrderService {
@@ -43,13 +41,13 @@ public class OrderService {
                 .map(it -> new OrderEventItem(it.getSku(), it.getQty()))
                 .toList();
 
-        publishAfterCommit(() -> publisher.orderCreated(
+        publisher.orderCreated(
                 saved.getId(),
                 saved.getCustomerId(),
                 saved.getAmountCents(),
                 saved.getCurrency(),
                 items
-        ));
+        );
 
         return saved;
     }
@@ -66,11 +64,11 @@ public class OrderService {
                 .map(it -> new OrderEventItem(it.getSku(), it.getQty()))
                 .toList();
 
-        publishAfterCommit(() -> publisher.orderStatusChanged(
+        publisher.orderStatusChanged(
                 order.getId(),
                 status,
                 items
-        ));
+        );
 
         return order;
     }
@@ -78,18 +76,5 @@ public class OrderService {
     @Transactional(readOnly = true)
     public java.util.Optional<Order> getById(Long id) {
         return repo.findByIdWithItems(id);
-    }
-
-    private static void publishAfterCommit(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    action.run();
-                }
-            });
-        } else {
-            action.run();
-        }
     }
 }

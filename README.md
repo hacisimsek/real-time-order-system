@@ -196,7 +196,7 @@ Micrometer publishes metrics used by the Grafana dashboard under the `reporting_
 | PostgreSQL          | 5432 | Primary database `appdb`                  |
 | RabbitMQ            | 5672 | AMQP broker (UI on 15672)                 |
 | Prometheus          | 9090 | Metrics scraper                           |
-| Grafana             | 3000 | Dashboards (default login `admin/admin`)  |
+| Grafana             | 3000 | Dashboards (credentials via `GF_SECURITY_ADMIN_*`, defaults to `admin`/`admin`) |
 
 ## Security
 
