@@ -73,5 +73,16 @@ to fall back safely when the service is degraded.
 - **Logs:** `docker logs reporting-service | tail -n 200`
 - **Dashboard:** `deploy/observability/dashboards/reporting-overview.json`
 
+## 6. Alert Rules
+
+Prometheus (`deploy/observability/alerts.yml`) fires the following alerts:
+
+| Alert | Trigger | Action |
+|-------|---------|--------|
+| `ReportingServiceDown` | `up{job="reporting-service"} == 0` for 1m | Check container logs, restart service |
+| `ReportingProcessingLatencyHigh` | p95 latency > 2s for 2m | Inspect Rabbit backlog, DB load, JVM heap |
+| `ReportingStalenessHigh` | No orders processed for >5m | Validate Rabbit connectivity, refresh snapshots |
+| `ReportingQueueBacklog` | `dev.reporting.order-created` queue >100 msgs for 5m | Scale consumers or flush DLQ |
+
 Keep this file updated when new operational tasks are introduced (e.g., new cache
 groups or queue bindings) to ensure the reporting module stays production-ready.

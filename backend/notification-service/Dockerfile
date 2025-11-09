@@ -1,29 +1,47 @@
+# syntax=docker/dockerfile:1.7
+
+ARG MAVEN_IMAGE=maven:3.9.7-eclipse-temurin-17
+ARG RUNTIME_IMAGE=eclipse-temurin:17-jre
+
 # ====== Build Stage ======
-FROM maven:3.9.7-eclipse-temurin-17 AS build
+FROM --platform=$BUILDPLATFORM ${MAVEN_IMAGE} AS build
+ARG SERVICE_DIR=notification-service
 WORKDIR /workspace
 
 COPY common-security/pom.xml common-security/pom.xml
 RUN mvn -q -f common-security/pom.xml -DskipTests dependency:go-offline
 
-COPY notification-service/pom.xml notification-service/pom.xml
+COPY ${SERVICE_DIR}/pom.xml ${SERVICE_DIR}/pom.xml
 
 COPY common-security/src common-security/src
 RUN mvn -q -f common-security/pom.xml -DskipTests install
 
-COPY notification-service/src notification-service/src
-RUN mvn -q -f notification-service/pom.xml -DskipTests package
+COPY ${SERVICE_DIR}/src ${SERVICE_DIR}/src
+RUN mvn -q -f ${SERVICE_DIR}/pom.xml -DskipTests package
 
 # ====== Runtime Stage ======
-FROM eclipse-temurin:17-jre
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
-WORKDIR /app
+FROM ${RUNTIME_IMAGE} AS runtime
+ARG SERVICE_DIR=notification-service
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0" \
+    APP_HOME=/app \
+    SPRING_PROFILES_ACTIVE=prod
+WORKDIR ${APP_HOME}
 
-# Uygulama jar'ını kopyala
-COPY --from=build /workspace/notification-service/target/*.jar app.jar
+LABEL org.opencontainers.image.title="notification-service" \
+      org.opencontainers.image.source="https://github.com/hacisimsek/real-time-order-system" \
+      org.opencontainers.image.description="Notification Service runtime image" \
+      org.opencontainers.image.licenses="MIT"
 
-# Healthcheck -> Spring actuator
-HEALTHCHECK --interval=15s --timeout=3s --start-period=25s \
-  CMD sh -c "wget -qO- http://localhost:${PORT:-8082}/actuator/health | grep '\"status\":\"UP\"'"
+RUN groupadd --system spring && \
+    useradd --system --home ${APP_HOME} --gid spring --shell /usr/sbin/nologin spring
 
-# Not: Spring portlarını application.yml belirliyor (8081/8082/8083)
+COPY --from=build /workspace/${SERVICE_DIR}/target/*.jar app.jar
+RUN chown spring:spring app.jar
+
+USER spring
+EXPOSE 8082
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=30s \
+  CMD wget -qO- http://localhost:${PORT:-8082}/actuator/health | grep '"status":"UP"'
+
 ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar app.jar"]

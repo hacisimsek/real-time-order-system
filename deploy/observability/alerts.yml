@@ -1,0 +1,38 @@
+groups:
+  - name: reporting-service.rules
+    rules:
+      - alert: ReportingServiceDown
+        expr: up{job="reporting-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Reporting service instance is unreachable
+          description: Prometheus has not scraped the reporting-service job for 1 minute.
+
+      - alert: ReportingProcessingLatencyHigh
+        expr: histogram_quantile(0.95, rate(reporting_order_processing_latency_bucket[5m])) > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Reporting processing latency p95 above 2s
+          description: The 95th percentile of reporting_order_processing_latency exceeded 2 seconds for over 2 minutes.
+
+      - alert: ReportingStalenessHigh
+        expr: time() - reporting_last_order_timestamp_seconds > 300
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Reporting service has not processed new orders for 5 minutes
+          description: Last processed order timestamp is older than 5 minutes.
+
+      - alert: ReportingQueueBacklog
+        expr: rabbitmq_queue_messages_ready{queue="dev.reporting.order-created"} > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Reporting queue backlog growing
+          description: dev.reporting.order-created queue has more than 100 ready messages for 5 minutes.

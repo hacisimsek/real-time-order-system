@@ -164,6 +164,10 @@ Micrometer publishes metrics used by the Grafana dashboard under the `reporting_
 - Requirements & data-mapping reference: `docs/reporting/requirements.md`.
 - Dashboard coverage & drill-down links: `docs/reporting/dashboard.md`.
 - Operational runbook (cache tuning, refresh cadence, fallback steps): `docs/reporting/runbook.md`.
+- Container hardening checklist (multi-stage builds, non-root users, healthchecks): `docs/containerization/baseline.md`.
+- Container release & rollback playbook: `docs/containerization/release.md`.
+- Runtime guide (Docker vs local workflows + metrics checklist): `docs/setup/running.md`.
+- Technical runtime deep-dive (flows, metrics, alert thresholds): `docs/setup/runtime-technical.md`.
 
 > Docker Compose v2 ignores the legacy `version` key and may show a warning. It is safe to ignore or remove the `version` line if desired.
 
