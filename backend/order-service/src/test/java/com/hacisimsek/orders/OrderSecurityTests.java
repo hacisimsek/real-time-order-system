@@ -37,6 +37,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class OrderSecurityTests {
 
+    static {
+        System.setProperty("jdk.attach.allowAttachSelf", "true");
+    }
+
     @Autowired
     MockMvc mvc;
 

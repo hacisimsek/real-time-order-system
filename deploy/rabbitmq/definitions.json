@@ -68,13 +68,25 @@
         "dead-letter-routing-key": "order.status-changed.v1.dlq"
       },
       "priority": 0
+    },
+    {
+      "vhost": "/",
+      "name": "reporting-dlx-created",
+      "pattern": "^dev\\.reporting\\.order-created$",
+      "apply-to": "queues",
+      "definition": {
+        "dead-letter-exchange": "reporting.dlx",
+        "dead-letter-routing-key": "order.created.v1.dlq"
+      },
+      "priority": 0
     }
   ],
   "exchanges": [
     {"name":"order.events","vhost":"/","type":"topic","durable":true,"internal":false,"auto_delete":false},
     {"name":"order.dlx","vhost":"/","type":"topic","durable":true,"internal":false,"auto_delete":false},
     {"name":"inventory.retry","vhost":"/","type":"topic","durable":true,"internal":false,"auto_delete":false},
-    {"name":"inventory.dlx","vhost":"/","type":"topic","durable":true,"internal":false,"auto_delete":false}
+    {"name":"inventory.dlx","vhost":"/","type":"topic","durable":true,"internal":false,"auto_delete":false},
+    {"name":"reporting.dlx","vhost":"/","type":"topic","durable":true,"internal":false,"auto_delete":false}
   ],
   "queues": [
     {"name":"dev.inventory.order-created","vhost":"/","durable":true,"auto_delete":false,"arguments":{}},
@@ -88,13 +100,17 @@
     {"name":"dev.notifications.order-created","vhost":"/","durable":true,"auto_delete":false,"arguments":{}},
     {"name":"dev.notifications.order-created.dlq","vhost":"/","durable":true,"auto_delete":false,"arguments":{}},
     {"name":"dev.notifications.order-status-changed","vhost":"/","durable":true,"auto_delete":false,"arguments":{}},
-    {"name":"dev.notifications.order-status-changed.dlq","vhost":"/","durable":true,"auto_delete":false,"arguments":{}}
+    {"name":"dev.notifications.order-status-changed.dlq","vhost":"/","durable":true,"auto_delete":false,"arguments":{}},
+
+    {"name":"dev.reporting.order-created","vhost":"/","durable":true,"auto_delete":false,"arguments":{}},
+    {"name":"dev.reporting.order-created.dlq","vhost":"/","durable":true,"auto_delete":false,"arguments":{}}
   ],
   "bindings": [
     {"source":"order.events","vhost":"/","destination":"dev.inventory.order-created","destination_type":"queue","routing_key":"order.created.v1","arguments":{}},
     {"source":"order.events","vhost":"/","destination":"dev.inventory.order-status-changed","destination_type":"queue","routing_key":"order.status-changed.v1","arguments":{}},
     {"source":"order.events","vhost":"/","destination":"dev.notifications.order-created","destination_type":"queue","routing_key":"order.created.v1","arguments":{}},
     {"source":"order.events","vhost":"/","destination":"dev.notifications.order-status-changed","destination_type":"queue","routing_key":"order.status-changed.v1","arguments":{}},
+    {"source":"order.events","vhost":"/","destination":"dev.reporting.order-created","destination_type":"queue","routing_key":"order.created.v1","arguments":{}},
 
     {"source":"inventory.retry","vhost":"/","destination":"dev.inventory.order-created.retry","destination_type":"queue","routing_key":"order.created.v1.retry","arguments":{}},
     {"source":"inventory.retry","vhost":"/","destination":"dev.inventory.order-status-changed.retry","destination_type":"queue","routing_key":"order.status-changed.v1.retry","arguments":{}},
@@ -103,6 +119,8 @@
     {"source":"inventory.dlx","vhost":"/","destination":"dev.inventory.order-status-changed.dlq","destination_type":"queue","routing_key":"order.status-changed.v1.dlq","arguments":{}},
 
     {"source":"order.dlx","vhost":"/","destination":"dev.notifications.order-created.dlq","destination_type":"queue","routing_key":"order.created.v1.dlq","arguments":{}},
-    {"source":"order.dlx","vhost":"/","destination":"dev.notifications.order-status-changed.dlq","destination_type":"queue","routing_key":"order.status-changed.v1.dlq","arguments":{}}
+    {"source":"order.dlx","vhost":"/","destination":"dev.notifications.order-status-changed.dlq","destination_type":"queue","routing_key":"order.status-changed.v1.dlq","arguments":{}},
+
+    {"source":"reporting.dlx","vhost":"/","destination":"dev.reporting.order-created.dlq","destination_type":"queue","routing_key":"order.created.v1.dlq","arguments":{}}
   ]
 }

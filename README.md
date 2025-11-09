@@ -58,8 +58,8 @@ docker compose version
 
 3. **Build and start application services**
    ```bash
-   docker compose build order-service notification-service inventory-service
-   docker compose up -d order-service notification-service inventory-service
+   docker compose build order-service notification-service inventory-service reporting-service
+   docker compose up -d order-service notification-service inventory-service reporting-service
    ```
 
 4. **Check health endpoints**
@@ -67,6 +67,7 @@ docker compose version
    curl -s http://localhost:8081/actuator/health
    curl -s http://localhost:8082/actuator/health
    curl -s http://localhost:8083/actuator/health
+   curl -s http://localhost:8084/actuator/health
    ```
 
 5. **Fetch the developer JWT token** (printed on startup)
@@ -89,6 +90,9 @@ docker compose version
 
    RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) \
      backend/inventory-service/mvnw -q test
+
+   RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) \
+     (cd backend && mvn -pl reporting-service test)
    ```
 
 7. **Manual end-to-end smoke test**
@@ -114,11 +118,52 @@ docker compose version
    curl -s http://localhost:8083/inventory/ABC-001
    ```
 
-8. **Shut everything down**
+8. **Reporting service smoke test**
+   ```bash
+   # Trigger a CSV export (JWT token required)
+   curl -s "http://localhost:8084/reports/orders?period=DAILY&refresh=true" \
+     -H 'Authorization: Bearer <DEV_TOKEN>' | jq
+
+   curl -s "http://localhost:8084/reports/orders/totals?period=DAILY" \
+     -H 'Authorization: Bearer <DEV_TOKEN>' | jq
+
+   curl -s "http://localhost:8084/reports/orders/top-customers?limit=5" \
+     -H 'Authorization: Bearer <DEV_TOKEN>' | jq
+   ```
+
+9. **Shut everything down**
    ```bash
    cd deploy
    docker compose down
    ```
+
+## Reporting Service
+
+The reporting service consumes `order.created.v1` events directly from RabbitMQ and maintains daily/weekly/monthly snapshots and rollups. Before starting the service, ensure the queue is provisioned (the embedded `RabbitAdmin` will create it automatically when the application connects):
+
+- Exchange: `order.events`
+- Routing key: `order.created.v1`
+- Queue: `dev.reporting.order-created`
+
+The following endpoints back dashboards and exports:
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /reports/orders` | Paginated snapshot list (`page`, `size`, `sort`, `refresh` query params) |
+| `GET /reports/orders/totals` | Aggregate totals for the selected window |
+| `GET /reports/orders/top-customers` | Leaderboard of the top customers (configurable `limit`) |
+| `GET /reports/orders/export` | CSV export of the current window |
+
+Micrometer publishes metrics used by the Grafana dashboard under the `reporting_*` namespace (`reporting_orders_processed_total`, `reporting_order_processing_latency`, `reporting_order_amount_cents`, `reporting_last_order_timestamp_seconds`). Import the dashboard located at `deploy/observability/dashboards/reporting-overview.json` to visualise throughput, latency, and export activity.
+
+**Performance & Caching**
+
+- `GET /reports/orders/totals` and `GET /reports/orders/top-customers` responses are cached via Caffeine (TTL 60s, max 500 entries by default). Override with `APP_REPORTING_CACHE_TTL` / `APP_REPORTING_CACHE_MAX_SIZE` in `.env`.
+- Manual cache flush: `curl -X DELETE http://localhost:8084/actuator/caches/reportTotals` (or `reportTopCustomers`).
+- Reporting-friendly indexes live in `backend/order-service/src/main/resources/db/migration/V3__reporting_indexes.sql` and must be applied wherever the `orders` table exists.
+- Requirements & data-mapping reference: `docs/reporting/requirements.md`.
+- Dashboard coverage & drill-down links: `docs/reporting/dashboard.md`.
+- Operational runbook (cache tuning, refresh cadence, fallback steps): `docs/reporting/runbook.md`.
 
 > Docker Compose v2 ignores the legacy `version` key and may show a warning. It is safe to ignore or remove the `version` line if desired.
 
@@ -148,6 +193,8 @@ docker compose version
 | `ROLE_INVENTORY_WRITE`    | Adjust/reserve/release/consume inventory       |
 | `ROLE_INVENTORY_OPS`      | Trigger DLQ replay endpoints                   |
 | `ROLE_NOTIFICATION_READ`  | Access notification-service protected routes   |
+| `ROLE_REPORTING_READ`     | View reporting snapshots/totals/top customers  |
+| `ROLE_REPORTING_EXPORT`   | CSV exports and snapshot refresh operations    |
 
 Refresh or rotate JWT secrets by updating `app.security.secrets` in each service configuration; the first entry is used for signing, subsequent entries remain valid for verification during rollovers.
 

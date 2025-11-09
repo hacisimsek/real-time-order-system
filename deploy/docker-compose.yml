@@ -168,6 +168,43 @@ services:
     networks: [rtos]
     restart: unless-stopped
 
+  reporting-service:
+    build:
+      context: ../backend
+      dockerfile: reporting-service/Dockerfile
+    image: rtos/reporting-service:dev
+    container_name: reporting-service
+    env_file: ./.env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      PORT: ${REPORTING_HTTP_PORT}
+
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASS: ${POSTGRES_PASSWORD}
+
+      RABBIT_HOST: ${RABBIT_HOST}
+      RABBIT_PORT: ${RABBIT_PORT}
+      RABBIT_USER: ${RABBIT_USER}
+      RABBIT_PASS: ${RABBIT_PASS}
+      SPRING_RABBITMQ_HOST: ${RABBIT_HOST}
+      SPRING_RABBITMQ_PORT: ${RABBIT_PORT}
+      SPRING_RABBITMQ_USERNAME: ${RABBIT_USER}
+      SPRING_RABBITMQ_PASSWORD: ${RABBIT_PASS}
+
+      JWT_SECRET: ${JWT_SECRET}
+      ORDER_EVENTS_EXCHANGE: order.events
+      REPORTING_ORDER_CREATED_QUEUE: dev.reporting.order-created
+      ORDER_EVENTS_ROUTING_CREATED: order.created.v1
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    ports: ["${REPORTING_HTTP_PORT}:8084"]
+    networks: [rtos]
+    restart: unless-stopped
+
   # ========= OBSERVABILITY =========
   prometheus:
     image: prom/prometheus:v2.55.1
@@ -184,6 +221,7 @@ services:
       - order-service
       - inventory-service
       - notification-service
+      - reporting-service
       - rabbitmq
     restart: unless-stopped
 
@@ -200,6 +238,7 @@ services:
       - ./observability/grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
       - ./observability/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/rtos-provider.yml:ro
       - ./rtos-dashboard.json:/var/lib/grafana/dashboards/rtos-dashboard.json:ro
+      - ./observability/dashboards/reporting-overview.json:/var/lib/grafana/dashboards/reporting-overview.json:ro
     networks: [ rtos ]
     depends_on:
       - prometheus

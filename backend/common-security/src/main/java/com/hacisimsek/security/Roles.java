@@ -11,5 +11,7 @@ public final class Roles {
     public static final String INVENTORY_OPS = "ROLE_INVENTORY_OPS";
 
     public static final String NOTIFICATION_READ = "ROLE_NOTIFICATION_READ";
-}
 
+    public static final String REPORTING_READ = "ROLE_REPORTING_READ";
+    public static final String REPORTING_EXPORT = "ROLE_REPORTING_EXPORT";
+}
