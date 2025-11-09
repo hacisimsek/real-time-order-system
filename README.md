@@ -61,6 +61,7 @@ docker compose version
    docker compose build order-service notification-service inventory-service reporting-service
    docker compose up -d order-service notification-service inventory-service reporting-service
    ```
+   Prefer running locally from IntelliJ? Import the Maven project, then for each service (`backend/*-service`) create a Spring Boot run configuration pointing to the `...ServiceApplication` class, set `SPRING_PROFILES_ACTIVE=dev` and the DB/Rabbit env variables from `deploy/.env`, and press **Run**. Detailed environment exports live in `docs/setup/running.md#running-services-locally-no-docker-images`.
 
 4. **Check health endpoints**
    ```bash
@@ -137,6 +138,12 @@ docker compose version
    docker compose down
    ```
 
+## Runtime Modes
+
+- **Docker Compose (recommended for demos):** Builds/pulls the four services plus Postgres, RabbitMQ, Prometheus, and Grafana. Follow `docs/setup/running.md#running-everything-via-docker-compose` for the full checklist (env overrides, smoke checks, teardown).
+- **Local JVM (hot-reload friendly):** Start infra containers only (`postgres`, `rabbitmq`, `prometheus`, `grafana`) and run each Spring Boot app via `./mvnw spring-boot:run`. Environment exports and verification steps live in `docs/setup/running.md#running-services-locally-no-docker-images`.
+- **Deep dive & metrics:** `docs/setup/runtime-technical.md` contains the sequence diagrams, KPI PromQL queries, and alert thresholds that back the dashboards/alerts referenced below.
+
 ## Reporting Service
 
 The reporting service consumes `order.created.v1` events directly from RabbitMQ and maintains daily/weekly/monthly snapshots and rollups. Before starting the service, ensure the queue is provisioned (the embedded `RabbitAdmin` will create it automatically when the application connects):
@@ -168,6 +175,13 @@ Micrometer publishes metrics used by the Grafana dashboard under the `reporting_
 - Container release & rollback playbook: `docs/containerization/release.md`.
 - Runtime guide (Docker vs local workflows + metrics checklist): `docs/setup/running.md`.
 - Technical runtime deep-dive (flows, metrics, alert thresholds): `docs/setup/runtime-technical.md`.
+
+## Observability & Alerts
+
+- Prometheus configuration: `deploy/observability/prometheus.yml` (scrapes all services plus RabbitMQ and loads `alerts.yml`).
+- Alert rules: `deploy/observability/alerts.yml` (service-down, high latency, staleness, queue backlog).
+- Grafana provisioning: `deploy/observability/grafana-datasource.yml`, `deploy/observability/grafana-dashboards.yml`, and dashboards in `deploy/observability/dashboards/`.
+- Reporting dashboard: `deploy/observability/dashboards/reporting-overview.json`, featuring filters for `$instance`/`$source` and drill-down links to `/reports/**`.
 
 > Docker Compose v2 ignores the legacy `version` key and may show a warning. It is safe to ignore or remove the `version` line if desired.
 
