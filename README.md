@@ -182,6 +182,7 @@ Micrometer publishes metrics used by the Grafana dashboard under the `reporting_
 - Alert rules: `deploy/observability/alerts.yml` (service-down, high latency, staleness, queue backlog).
 - Grafana provisioning: `deploy/observability/grafana-datasource.yml`, `deploy/observability/grafana-dashboards.yml`, and dashboards in `deploy/observability/dashboards/`.
 - Reporting dashboard: `deploy/observability/dashboards/reporting-overview.json`, featuring filters for `$instance`/`$source` and drill-down links to `/reports/**`.
+- Order outbox metrics: `order_outbox_dispatch_total{result=*}` counters and `order_outbox_pending_events` gauge surface relay health in Prometheus.
 
 > Docker Compose v2 ignores the legacy `version` key and may show a warning. It is safe to ignore or remove the `version` line if desired.
 
@@ -243,16 +244,21 @@ Schema excerpt:
 
 ```sql
 CREATE TABLE outbox_events (
-  id          BIGSERIAL PRIMARY KEY,
-  aggregate_id BIGINT NOT NULL,
-  type        VARCHAR(64) NOT NULL,
-  payload     JSONB NOT NULL,
-  status      VARCHAR(16) NOT NULL DEFAULT 'PENDING',
-  attempts    INT NOT NULL DEFAULT 0,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_error  TEXT
+  id            BIGSERIAL PRIMARY KEY,
+  event_id      VARCHAR(64) NOT NULL UNIQUE,
+  aggregate_id  BIGINT NOT NULL,
+  aggregate_type VARCHAR(64) NOT NULL,
+  event_type    VARCHAR(64) NOT NULL,
+  exchange      VARCHAR(128) NOT NULL,
+  routing_key   VARCHAR(128) NOT NULL,
+  payload       JSONB NOT NULL,
+  status        VARCHAR(16) NOT NULL DEFAULT 'PENDING',
+  attempts      INT NOT NULL DEFAULT 0,
+  last_error    TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX ux_outbox_agg_type ON outbox_events(aggregate_id, type);
+CREATE INDEX idx_outbox_status_created_at ON outbox_events(status, created_at);
 ```
 
 ## Observability
