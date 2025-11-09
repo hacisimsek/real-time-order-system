@@ -57,6 +57,8 @@ sequenceDiagram
 | Revenue rate | `rate(reporting_order_amount_cents_sum[5m])/100` | Revenue/min (TRY) | Mirrors throughput × order value |
 | Staleness | `time() - reporting_last_order_timestamp_seconds` | Seconds since last processed order | < 60 s under load |
 | Queue backlog | `rabbitmq_queue_messages_ready{queue="dev.reporting.order-created"}` | Readiness of reporting queue | < 20 |
+| Outbox dispatch | `sum(rate(order_outbox_dispatch_total{result="success"}[5m]))` | How many order events flushed from outbox | Should track order throughput |
+| Outbox pending gauge | `order_outbox_pending_events` | Gauge maintained by relay; pending events awaiting publish | Ideally 0; investigate if >0 for long |
 
 **Alert thresholds (config in `deploy/observability/alerts.yml`):**
 - `ReportingServiceDown`: `up==0` for 1 m.
