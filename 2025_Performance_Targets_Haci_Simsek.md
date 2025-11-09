@@ -93,6 +93,13 @@ The solution will adopt an **event-driven design** that encompasses supporting i
 - Dockerizing all services
 - Orchestration with Docker Compose & Kubernetes (Minikube)
 - Monitoring & alerting setup (Prometheus, Grafana)
+- **Execution Plan**
+  - Container Baseline Audit: align all service Dockerfiles, build args, health checks, and multi-arch tags; document image hardening checklist.
+  - Compose to K8s Parity: translate docker-compose services (app, RabbitMQ, Postgres, observability) into Kubernetes manifests/Helm charts with ConfigMaps & Secrets.
+  - Deployment Workflows: create Kubectl/Helm scripts (dev/stage) including namespace bootstrap, storage classes, and Rabbit/Postgres stateful components.
+  - Runtime Policies: add readiness/liveness probes, resource requests/limits, PodDisruptionBudgets, and autoscaling hooks for each microservice.
+  - Observability Wiring: configure Prometheus Operator scrape configs, Grafana dashboards import automation, and alert rules for key KPIs (latency, staleness, queue depth).
+  - Release Documentation: publish runbook for container build/push, K8s deployment checklist, rollback strategy, and troubleshooting flowcharts.
 
 #### 7. Testing, CI/CD & Production Deployment – Dec 20 – Dec 27, 2025 (1 Week)
 - Integration, load, and performance testing
