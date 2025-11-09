@@ -50,6 +50,12 @@ The solution will adopt an **event-driven design** that encompasses supporting i
 - Finalize full project scope and delivery milestones
 - Set up development environment (Java/Spring Boot, PostgreSQL, Redis, RabbitMQ)
 - Architecture design: **Microservices + CQRS + Event-driven**
+- **Execution Plan**
+  - Stakeholder Alignment: identify business capabilities (ordering, inventory, notifications, reporting) and capture a shared glossary.
+  - Architecture Boards: draft context/container diagrams and event flows; validate the choice of PostgreSQL, RabbitMQ, Redis against scalability and HA requirements.
+  - Environment Bootstrap: provision dev infra (Docker Compose), set up git branching strategy, and define coding standards (Java 17, Spring Boot 3.5, Maven wrapper).
+  - Backlog Shaping: break down epics into deliverable user stories with acceptance criteria; prioritize for the subsequent phases.
+  - Risk Register: log technical/operational risks (DB capacity, message ordering, security gaps) and mitigation plans.
 
 #### 2. Core Microservices Development – Sep 6 – Oct 17, 2025 (6 Weeks)
 - **Order Management Service:** CRUD, workflow management
@@ -58,12 +64,26 @@ The solution will adopt an **event-driven design** that encompasses supporting i
 - PostgreSQL schema design and integration
 - RESTful API development
 - Unit testing & error handling
+- **Execution Plan**
+  - Domain Modeling: define aggregates/entities (Order, OrderItem, InventoryItem, NotificationRequest) and map them to Flyway migrations.
+  - Service Skeletons: scaffold Spring Boot apps with REST controllers, DTOs, service layers, repositories, and exception handling patterns.
+  - Database Integration: configure JDBC/Hibernate, connection pooling, and transactional semantics; add baseline seed data scripts if needed.
+  - Messaging Hooks: implement outbox/event publishing interfaces in the order service so phase 3 can plug in messaging without refactors.
+  - API Validation: add bean validation, error responses, and contract tests (MockMvc/WebTestClient).
+  - Test Strategy: write JUnit/Mockito suites for business logic and security guards; ensure `mvn -pl <service> -am test` runs clean in CI.
 
 #### 3. Messaging Infrastructure – Oct 18 – Nov 7, 2025 (3 Weeks)
 - RabbitMQ setup and configuration
 - Exchange, queue, and binding definitions
 - Event publish/subscribe integration
 - Retry logic, DLQ management, and idempotency
+- **Execution Plan**
+  - Topology Blueprint: define exchanges (`order.events`, retry/dlx exchanges), routing keys, and queue naming conventions for each consumer.
+  - Provisioning Automation: add Rabbit definitions to `deploy/rabbitmq/definitions.json` and ensure services declare queues/bindings via Spring AMQP.
+  - Outbox Publisher: finalize reliable publish loop with ack/retry semantics and observability metrics.
+  - Consumer Idempotency: implement message log/retry strategy (e.g., for inventory/reporting) and standardize manual ack handling with dead-letter routing.
+  - DLQ/Retry Tooling: expose operational endpoints/scripts to replay or purge DLQ messages.
+  - Messaging Tests: create integration tests or containerized verification to assert routing keys and error handling logic.
 
 #### 4. Security Implementation – Nov 8 – Nov 21, 2025 (2 Weeks)
 - JWT-based authentication
