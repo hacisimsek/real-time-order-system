@@ -67,15 +67,42 @@ curl -s http://localhost:8083/inventory/ABC-001 \
 ```
 Expected: `reservedQty` returns to 0; `availableQty` reflects (initial stock − 3).
 
-## 8. Sanity-Check Actuator Endpoints
+## 8. Verify Reporting Snapshots
+```bash
+# Refresh & list current snapshots (auto-refresh will also keep these warm)
+curl -s "http://localhost:8084/reports/orders?period=DAILY&refresh=true" \
+  -H 'Authorization: Bearer <DEV_TOKEN>' | jq
+
+# Aggregate totals for the resolved window
+curl -s http://localhost:8084/reports/orders/totals \
+  -H 'Authorization: Bearer <DEV_TOKEN>' | jq
+
+# Top customers leaderboard
+curl -s "http://localhost:8084/reports/orders/top-customers?limit=5" \
+  -H 'Authorization: Bearer <DEV_TOKEN>' | jq
+
+# CSV export (saved to /tmp for convenience)
+curl -s -o /tmp/order-reports.csv \
+  -H 'Authorization: Bearer <DEV_TOKEN>' \
+  http://localhost:8084/reports/orders/export
+```
+Expected:
+- `/reports/orders` returns at least one snapshot that includes the order created above (look at `snapshotDate` / `totalOrders`).
+- `/reports/orders/totals` and `/top-customers` aggregate the same numbers.
+- The export response headers contain `Content-Disposition: attachment; filename="order-reports-...csv"` and `/tmp/order-reports.csv` opens as a valid CSV.
+
+> Troubleshooting: Reporting now logs its JWT wiring (`SecurityDiagnosticsRunner`) at startup and dumps Spring Security filter debug output when `logging.level.org.springframework.security=DEBUG`. If a token is rejected, look for `FilterChainProxy` lines in `docker compose logs reporting-service --tail=200` to confirm which authority check failed.
+
+## 9. Sanity-Check Actuator Endpoints
 ```bash
 curl -s http://localhost:8081/actuator/health
 curl -s http://localhost:8082/actuator/health
 curl -s http://localhost:8083/actuator/health
+curl -s http://localhost:8084/actuator/health
 ```
 Health endpoints remain public to simplify monitoring.
 
-## 9. Teardown
+## 10. Teardown
 ```bash
 cd deploy
 docker compose down

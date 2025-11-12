@@ -71,6 +71,7 @@ to fall back safely when the service is degraded.
 - **Health:** `GET /actuator/health`
 - **Metrics:** `GET /actuator/prometheus` (filter `reporting_*`)
 - **Logs:** `docker logs reporting-service | tail -n 200`
+- **JWT wiring:** On every dev boot the service logs `SecurityDiagnosticsRunner` output (issuer, audience, secret count). Pair this with the default `DEBUG` levels for `com.hacisimsek.security` and `org.springframework.security` to trace rejected tokens (`FilterChainProxy` entries will indicate which check failed).
 - **Dashboard:** `deploy/observability/dashboards/reporting-overview.json`
 
 ## 6. Alert Rules

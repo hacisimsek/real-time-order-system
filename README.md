@@ -163,6 +163,8 @@ The following endpoints back dashboards and exports:
 
 Micrometer publishes metrics used by the Grafana dashboard under the `reporting_*` namespace (`reporting_orders_processed_total`, `reporting_order_processing_latency`, `reporting_order_amount_cents`, `reporting_last_order_timestamp_seconds`). Import the dashboard located at `deploy/observability/dashboards/reporting-overview.json` to visualise throughput, latency, and export activity.
 
+> **Auth diagnostics**: When the service boots with `SPRING_PROFILES_ACTIVE=dev`, `SecurityDiagnosticsRunner` logs the issuer, audience, and number of configured secrets (e.g. `Reporting security config → issuer='rtos' ...`). Combined with the now-default `DEBUG` logging for `com.hacisimsek.security` and `org.springframework.security`, this makes it easy to pinpoint token wiring issues directly from `docker compose logs reporting-service`.
+
 **Performance & Caching**
 
 - `GET /reports/orders/totals` and `GET /reports/orders/top-customers` responses are cached via Caffeine (TTL 60s, max 500 entries by default). Override with `APP_REPORTING_CACHE_TTL` / `APP_REPORTING_CACHE_MAX_SIZE` in `.env`.
