@@ -66,3 +66,8 @@ app:
     cache:
       ttl: ${APP_REPORTING_CACHE_TTL:60s}
       maximum-size: ${APP_REPORTING_CACHE_MAX_SIZE:500}
+
+logging:
+  level:
+    com.hacisimsek.security: DEBUG
+    org.springframework.security: DEBUG

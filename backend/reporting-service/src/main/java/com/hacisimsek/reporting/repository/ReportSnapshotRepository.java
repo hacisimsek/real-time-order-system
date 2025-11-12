@@ -16,8 +16,8 @@ public interface ReportSnapshotRepository extends JpaRepository<ReportSnapshot, 
     @Query("""
             select r from ReportSnapshot r
             where r.periodType = :period
-              and (:startDate is null or r.snapshotDate >= :startDate)
-              and (:endDate is null or r.snapshotDate <= :endDate)
+              and r.snapshotDate >= :startDate
+              and r.snapshotDate <= :endDate
             order by r.snapshotDate asc
             """)
     List<ReportSnapshot> findSnapshots(
@@ -33,14 +33,14 @@ public interface ReportSnapshotRepository extends JpaRepository<ReportSnapshot, 
     @Query(value = """
             select r from ReportSnapshot r
             where r.periodType = :period
-              and (:startDate is null or r.snapshotDate >= :startDate)
-              and (:endDate is null or r.snapshotDate <= :endDate)
+              and r.snapshotDate >= :startDate
+              and r.snapshotDate <= :endDate
             """,
             countQuery = """
             select count(r) from ReportSnapshot r
             where r.periodType = :period
-              and (:startDate is null or r.snapshotDate >= :startDate)
-              and (:endDate is null or r.snapshotDate <= :endDate)
+              and r.snapshotDate >= :startDate
+              and r.snapshotDate <= :endDate
             """)
     Page<ReportSnapshot> findSnapshots(
             @Param("period") ReportPeriod period,
@@ -59,8 +59,8 @@ public interface ReportSnapshotRepository extends JpaRepository<ReportSnapshot, 
                    coalesce(sum(r.totalRevenueCents),0) as totalRevenueCents
             from ReportSnapshot r
             where r.periodType = :period
-              and (:startDate is null or r.snapshotDate >= :startDate)
-              and (:endDate is null or r.snapshotDate <= :endDate)
+              and r.snapshotDate >= :startDate
+              and r.snapshotDate <= :endDate
             """)
     SnapshotTotals computeTotals(
             @Param("period") ReportPeriod period,
