@@ -70,12 +70,14 @@ sequenceDiagram
 
 1. **Seed data**
    ```bash
+   DEV_TOKEN="Bearer <paste-dev-token>"
    curl -s -X PUT http://localhost:8083/inventory/ABC-001/adjust \
      -H 'Content-Type: application/json' \
+     -H "Authorization: ${DEV_TOKEN}" \
      -d '{"delta": 100, "reason": "demo"}'
-
    for i in $(seq 1 25); do
-     curl -s -X POST http://localhost:8081/orders -H 'Authorization: Bearer <DEV_TOKEN>' \
+     curl -s -X POST http://localhost:8081/orders \
+       -H "Authorization: ${DEV_TOKEN}" \
        -H 'Content-Type: application/json' \
        -d "{\"customerId\":\"C-$i\",\"amountCents\":1599,\"currency\":\"TRY\",\"items\":[{\"sku\":\"ABC-001\",\"qty\":1}]}" > /dev/null
    done

@@ -69,12 +69,17 @@ graph LR
    curl -s http://localhost:8081/actuator/health
    curl -s http://localhost:8084/actuator/health
    ```
-5. **Metrics & dashboards**
+5. **Fetch dev token for secured APIs**
+   ```bash
+   docker compose logs order-service | grep "DEV ADMIN TOKEN"
+   ```
+   Copy the token (valid ~1h). Use it as `Authorization: Bearer <token>` for Order/Inventory/Reporting calls.
+6. **Metrics & dashboards**
    - Prometheus: http://localhost:9090
    - Grafana: http://localhost:3000 (credentials from `GF_SECURITY_ADMIN_USER/PASSWORD` in `deploy/docker-compose.yml`, default `admin` / `admin`)
      - Import dashboards auto-provisioned (`rtos-dashboard` + `reporting-overview`).
    - Reporting metrics: `curl -s http://localhost:8084/actuator/prometheus | head`
-6. **Tear down**
+7. **Tear down**
    ```bash
    docker compose down -v
    ```

@@ -23,8 +23,8 @@ to fall back safely when the service is degraded.
 
 | Action | Steps |
 |--------|-------|
-| Inspect caches | `curl -s http://localhost:8084/actuator/caches | jq` |
-| Flush caches | `curl -X DELETE http://localhost:8084/actuator/caches/reportTotals`<br>`curl -X DELETE http://localhost:8084/actuator/caches/reportTopCustomers` |
+| Inspect caches | `curl -s -H 'Authorization: Bearer <DEV_TOKEN>' http://localhost:8084/actuator/caches | jq` |
+| Flush caches | `curl -X DELETE -H 'Authorization: Bearer <DEV_TOKEN>' http://localhost:8084/actuator/caches/reportTotals`<br>`curl -X DELETE -H 'Authorization: Bearer <DEV_TOKEN>' http://localhost:8084/actuator/caches/reportTopCustomers` |
 | Change TTL | Set `APP_REPORTING_CACHE_TTL=30s` (or ISO-8601 duration) in `.env`, rebuild/restart. |
 | Change max size | Set `APP_REPORTING_CACHE_MAX_SIZE=1000`, rebuild/restart. |
 

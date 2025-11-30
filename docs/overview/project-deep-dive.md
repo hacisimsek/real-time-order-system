@@ -110,12 +110,13 @@ flowchart LR
 ## 6. Runtime & Observability Detayları
 
 ### 6.1 Docker Compose Flow
-1. `cd deploy && docker compose up -d postgres rabbitmq prometheus grafana`
+1. `cd deploy && docker compose up -d postgres redis rabbitmq prometheus grafana`
 2. `docker compose build order-service ... reporting-service`
 3. `docker compose up -d order-service ... reporting-service`
 4. Aktiflik kontrolü: `curl http://localhost:8084/actuator/health`
-5. Grafana: `http://localhost:3000` (şifre `GF_SECURITY_ADMIN_*` değişkenleriyle tanımlanır; varsayılan `admin`/`admin`), “Reporting Overview” dashboard’u.
-6. Prometheus alertleri: `http://localhost:9090/alerts`.
+5. Dev token: `docker compose logs order-service | grep "DEV ADMIN TOKEN"` (1 saat geçerli)
+6. Grafana: `http://localhost:3000` (şifre `GF_SECURITY_ADMIN_*` değişkenleriyle tanımlanır; varsayılan `admin`/`admin`), “Reporting Overview” dashboard’u.
+7. Prometheus alertleri: `http://localhost:9090/alerts`.
 
 ### 6.2 IntelliJ/Spring Boot Run
 1. Projeyi Maven olarak import et.
@@ -149,7 +150,3 @@ flowchart LR
 - **Observability**: Prometheus/Grafana + alert kuralları projenin “yaşayan” metriklerini izlenebilir kıldı.
 
 Bu belgeyi tamamladığında, projenin ne yaptığı, hangi teknolojileri nasıl kullandığı ve işletim açısından nasıl yönetileceği konusunda net bir fikir edinmiş olman gerekir. Detaylı komutlar ve diyagramlar için referans bağlantıları README’de listelenmiştir. Soruların olursa veya belirli bir fazın daha derin anlatımını istersen hemen haber ver!
-- **Order Outbox & Messaging (Phase 2-3 köprüsü):**
-  - Outbox tablosu (`V4__outbox_events.sql`) ORM entity/repository ile yönetiliyor.
-  - `OutboxOrderEventPublisher` domain olaylarını JSON payload’a çevirerek outbox’a yazar; `OutboxRelay` scheduler’ı RabbitMQ’ya gönderir.
-  - Micrometer metrikleri: `order_outbox_dispatch_total{result}` ve `order_outbox_pending_events` gauge’i Prometheus’ta izlenebilir.

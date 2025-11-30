@@ -7,18 +7,20 @@ This scenario exercises the secured RTOS stack end to end, covering JWT-protecte
 cd deploy
 docker compose up -d postgres redis rabbitmq
 # Build & start app containers (picks up latest jars)
-docker compose up -d --build order-service inventory-service notification-service
+docker compose up -d --build order-service inventory-service notification-service reporting-service
+# (Optional) Observability
+docker compose up -d prometheus grafana
 ```
 
 ## 2. Retrieve Developer Token
 ```bash
 docker compose logs order-service | grep "DEV ADMIN TOKEN"
 ```
-Copy the `Bearer …` token (valid for 1 hour). Use it as `<DEV_TOKEN>` below.
+Copy the `Bearer …` token (valid for 1 hour). Use it as `<DEV_TOKEN>` below (all protected endpoints require it).
 
 ### Optional: Use the Postman Collection
-- Import `docs/testing/postman/rtos.postman_collection.json` plus the `docs/testing/postman/rtos-local.postman_environment.json` environment.
-- In Postman, select the **RTOS Local** environment, paste the raw token (without `Bearer `) into the `dev_token` variable, and run the requests in order (Health → Inventory → Orders → Reporting).
+- Import `docs/postman/rtos.postman_collection.json` plus `docs/postman/rtos-local.postman_environment.json`.
+- Select the **RTOS Local** environment, paste the raw JWT **without** `Bearer ` into the `jwt` variable. The collection already adds the `Bearer` prefix.
 - The collection mirrors the curl steps below, so you can iterate quickly without retyping headers. The generated dev token now includes reporting roles, so the same token works for `/reports/**` calls.
 
 ## 3. Seed Inventory
@@ -28,7 +30,7 @@ curl -s -X PUT http://localhost:8083/inventory/ABC-001/adjust \
   -H 'Authorization: Bearer <DEV_TOKEN>' \
   -d '{"delta": 25, "reason": "manual seed"}'
 ```
-Expected: `availableQty: 25`, `reservedQty: 0`.
+Expected: `availableQty` artar, `reservedQty` 0 kalır (değerler mevcut stoğa göre değişir).
 
 ## 4. Create an Order
 ```bash
@@ -74,7 +76,7 @@ curl -s "http://localhost:8084/reports/orders?period=DAILY&refresh=true" \
   -H 'Authorization: Bearer <DEV_TOKEN>' | jq
 
 # Aggregate totals for the resolved window
-curl -s http://localhost:8084/reports/orders/totals \
+curl -s "http://localhost:8084/reports/orders/totals?period=DAILY" \
   -H 'Authorization: Bearer <DEV_TOKEN>' | jq
 
 # Top customers leaderboard
@@ -84,7 +86,7 @@ curl -s "http://localhost:8084/reports/orders/top-customers?limit=5" \
 # CSV export (saved to /tmp for convenience)
 curl -s -o /tmp/order-reports.csv \
   -H 'Authorization: Bearer <DEV_TOKEN>' \
-  http://localhost:8084/reports/orders/export
+  "http://localhost:8084/reports/orders/export?period=DAILY"
 ```
 Expected:
 - `/reports/orders` returns at least one snapshot that includes the order created above (look at `snapshotDate` / `totalOrders`).
