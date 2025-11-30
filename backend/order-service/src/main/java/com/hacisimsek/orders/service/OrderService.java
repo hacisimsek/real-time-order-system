@@ -7,6 +7,7 @@ import com.hacisimsek.orders.dto.OrderCreateRequest;
 import com.hacisimsek.orders.messaging.OrderEventItem;
 import com.hacisimsek.orders.messaging.OrderEventPublisher;
 import com.hacisimsek.orders.repository.OrderRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +17,8 @@ public class OrderService {
     private final OrderRepository repo;
     private final OrderEventPublisher publisher;
 
-    public OrderService(OrderRepository repo, OrderEventPublisher publisher) {
+    public OrderService(OrderRepository repo,
+                        @Qualifier("outboxOrderEventPublisher") OrderEventPublisher publisher) {
         this.repo = repo;
         this.publisher = publisher;
     }

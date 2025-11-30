@@ -1,7 +1,7 @@
 package com.hacisimsek.orders.messaging;
 
 import com.hacisimsek.orders.config.MessagingProps;
-import com.hacisimsek.orders.domain.OrderItem;
+
 import com.hacisimsek.orders.domain.OrderStatus;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -22,9 +22,9 @@ public class RabbitOrderEventPublisher implements OrderEventPublisher {
     }
 
     @Override
-    public void orderCreated(Long id, String customerId, long amountCents, String currency, List<OrderItem> items) {
+    public void orderCreated(Long id, String customerId, long amountCents, String currency, List<OrderEventItem> items) {
         var eventId = UUID.randomUUID().toString();
-        var itemsList = items.stream().map(i -> Map.of("sku", i.getSku(), "qty", i.getQty())).toList();
+        var itemsList = items.stream().map(i -> Map.of("sku", i.sku(), "qty", i.qty())).toList();
 
         var payload = Map.of(
                 "type","order.created.v1",
@@ -44,9 +44,9 @@ public class RabbitOrderEventPublisher implements OrderEventPublisher {
     }
 
     @Override
-    public void orderStatusChanged(Long id, OrderStatus status, List<OrderItem> items) {
+    public void orderStatusChanged(Long id, OrderStatus status, List<OrderEventItem> items) {
         var eventId = UUID.randomUUID().toString();
-        var itemsList = items.stream().map(i -> Map.of("sku", i.getSku(), "qty", i.getQty())).toList();
+        var itemsList = items.stream().map(i -> Map.of("sku", i.sku(), "qty", i.qty())).toList();
 
         var payload = Map.of(
                 "type","order.status-changed.v1",

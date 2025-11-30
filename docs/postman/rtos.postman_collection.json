@@ -1,0 +1,245 @@
+{
+  "info": {
+    "_postman_id": "rtos-local-collection",
+    "name": "RTOS Local Manual Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Local manual smoke tests for Real-Time Order System. Use with the RTOS Local environment."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "Adjust Inventory",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": 20,\n  \"reason\": \"seed\"\n}"
+            },
+            "url": {
+              "raw": "{{inventory_base}}/inventory/{{sku}}/adjust",
+              "host": [
+                "{{inventory_base}}"
+              ],
+              "path": [
+                "inventory",
+                "{{sku}}",
+                "adjust"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base}}/inventory/{{sku}}",
+              "host": [
+                "{{inventory_base}}"
+              ],
+              "path": [
+                "inventory",
+                "{{sku}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.id) {",
+                  "  pm.environment.set('order_id', body.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customer_id}}\",\n  \"amountCents\": {{amount_cents}},\n  \"currency\": \"{{currency}}\",\n  \"items\": [\n    { \"sku\": \"{{sku}}\", \"qty\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{order_base}}/orders",
+              "host": [
+                "{{order_base}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{order_base}}/orders/{{order_id}}",
+              "host": [
+                "{{order_base}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"status\": \"FULFILLED\" }"
+            },
+            "url": {
+              "raw": "{{order_base}}/orders/{{order_id}}/status",
+              "host": [
+                "{{order_base}}"
+              ],
+              "path": [
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reporting",
+      "item": [
+        {
+          "name": "List Orders (snapshot refresh)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base}}/reports/orders?period={{period}}&refresh=true",
+              "host": [
+                "{{reporting_base}}"
+              ],
+              "path": [
+                "reports",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}"
+                },
+                {
+                  "key": "refresh",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Totals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base}}/reports/orders/totals?period={{period}}",
+              "host": [
+                "{{reporting_base}}"
+              ],
+              "path": [
+                "reports",
+                "orders",
+                "totals"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Top Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base}}/reports/orders/top-customers?limit=5",
+              "host": [
+                "{{reporting_base}}"
+              ],
+              "path": [
+                "reports",
+                "orders",
+                "top-customers"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
