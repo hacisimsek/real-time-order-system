@@ -48,6 +48,7 @@ services:
       - "15692:15692"
     volumes:
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     healthcheck:
       test: [ "CMD-SHELL", "rabbitmq-diagnostics -q ping" ]
       interval: 10s
@@ -183,6 +184,10 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
 
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      APP_REPORTING_CACHE_PROVIDER: ${APP_REPORTING_CACHE_PROVIDER:-caffeine}
+
       RABBIT_HOST: ${RABBIT_HOST}
       RABBIT_PORT: ${RABBIT_PORT}
       RABBIT_USER: ${RABBIT_USER}
@@ -235,8 +240,8 @@ services:
     volumes:
       - ./observability/grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml:ro
       - ./observability/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/rtos-provider.yml:ro
-      - ./rtos-dashboard.json:/var/lib/grafana/dashboards/rtos-dashboard.json:ro
       - ./observability/dashboards/reporting-overview.json:/var/lib/grafana/dashboards/reporting-overview.json:ro
+      - ./observability/dashboards/rtos-services.json:/var/lib/grafana/dashboards/rtos-services.json:ro
     networks: [ rtos ]
     depends_on:
       - prometheus

@@ -108,23 +108,34 @@ The solution will adopt an **event-driven design** that encompasses supporting i
   - Visualization Layer: provision dashboards (Grafana or custom UI) with reusable filters, role-based widgets, and drill-down links.
   - Performance Validation: run load tests on heavy reports, add caching/indices to meet SLA.<br>Document fallback procedures.
   - Documentation & Handover: publish report catalog, operational runbooks (refresh cadence, alerting), and user onboarding guides.
+  - Demo Note: for presentation purposes, the reporting cache can be backed by Redis (`APP_REPORTING_CACHE_PROVIDER=redis`) instead of in-memory cache.
+  - Demo Note (ops): if Redis-backed caches cause errors after a code change, flush `reportTotals` / `reportTopCustomers` (e.g., via `DELETE /actuator/caches/...`) and retry.
 
 #### 6. Containerization & Orchestration – Dec 6 – Dec 19, 2025 (2 Weeks)
 - Dockerizing all services
-- Orchestration with Docker Compose & Kubernetes (Minikube)
+- Orchestration with Docker Compose (local demo scope)
 - Monitoring & alerting setup (Prometheus, Grafana)
 - **Execution Plan**
   - Container Baseline Audit: align all service Dockerfiles, build args, health checks, and multi-arch tags; document image hardening checklist.
-  - Compose to K8s Parity: translate docker-compose services (app, RabbitMQ, Postgres, observability) into Kubernetes manifests/Helm charts with ConfigMaps & Secrets.
-  - Deployment Workflows: create Kubectl/Helm scripts (dev/stage) including namespace bootstrap, storage classes, and Rabbit/Postgres stateful components.
-  - Runtime Policies: add readiness/liveness probes, resource requests/limits, PodDisruptionBudgets, and autoscaling hooks for each microservice.
-  - Observability Wiring: configure Prometheus Operator scrape configs, Grafana dashboards import automation, and alert rules for key KPIs (latency, staleness, queue depth).
-  - Release Documentation: publish runbook for container build/push, K8s deployment checklist, rollback strategy, and troubleshooting flowcharts.
+  - Compose Baseline: keep docker-compose definitions aligned for app services, RabbitMQ, Postgres, and observability components.
+  - Runtime Policies: add readiness/liveness probes and resource hints where applicable for local validation.
+  - Observability Wiring: configure Prometheus scrape configs, Grafana dashboard provisioning, and alert rules for key KPIs (latency, staleness, queue depth).
+  - Release Documentation: publish runbook for container build/push, local deployment checklist, rollback steps, and troubleshooting flowcharts.
+
+- **Monitoring Checklist (Local Demo)**
+  - Prometheus targets: app services + RabbitMQ exporter scraping successfully (`deploy/observability/prometheus.yml`).
+  - Grafana dashboards: Reporting Overview + RTOS Services Overview load without errors (`deploy/observability/dashboards/reporting-overview.json`, `deploy/observability/dashboards/rtos-services.json`).
+  - Key metrics: throughput, staleness, queue depth visible with recent data (Grafana dashboards above).
+  - Alerts: rules loaded and firing state visible in Prometheus UI (`deploy/observability/alerts.yml`).
+  - Runbook: quick show URLs and PromQL snippets documented (`docs/reporting/runbook.md`).
 
 #### 7. Testing, CI/CD & Production Deployment – Dec 20 – Dec 27, 2025 (1 Week)
 - Integration, load, and performance testing
 - CI/CD pipeline (GitHub Actions)
 - Operational documentation and production go-live
+
+> **Note (demo/learning scope):** This repository is prepared for learning and presentations, not a production go-live.  
+> The “production deployment” outcome is treated as a reproducible **local demo deployment** via Docker Compose, with CI running tests/builds to keep the project stable for demos.
 
 ---
 
@@ -137,7 +148,7 @@ The solution will adopt an **event-driven design** that encompasses supporting i
 | **Messaging** | RabbitMQ |
 | **Caching** | Redis |
 | **Architecture** | Microservices, CQRS, Event-driven |
-| **Containerization** | Docker, Kubernetes (Minikube) |
+| **Containerization** | Docker (local demo scope) |
 | **Security** | JWT, RBAC |
 | **CI/CD** | GitHub Actions |
 | **Monitoring** | Prometheus, Grafana |

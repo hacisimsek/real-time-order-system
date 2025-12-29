@@ -112,7 +112,7 @@
             "type": "prometheus",
             "uid": "prometheus_ds"
           },
-          "expr": "histogram_quantile(0.9, rate(reporting_order_processing_latency_bucket{instance=~\"$instance\"}[5m]))",
+          "expr": "((histogram_quantile(0.9, sum by (le) (rate(reporting_order_processing_latency_seconds_bucket{instance=~\"$instance\"}[5m])))) unless on() (sum(rate(reporting_order_processing_latency_seconds_count{instance=~\"$instance\"}[5m])) == 0)) or vector(0)",
           "legendFormat": "p90 latency",
           "refId": "A"
         },
@@ -121,7 +121,7 @@
             "type": "prometheus",
             "uid": "prometheus_ds"
           },
-          "expr": "histogram_quantile(0.99, rate(reporting_order_processing_latency_bucket{instance=~\"$instance\"}[5m]))",
+          "expr": "((histogram_quantile(0.99, sum by (le) (rate(reporting_order_processing_latency_seconds_bucket{instance=~\"$instance\"}[5m])))) unless on() (sum(rate(reporting_order_processing_latency_seconds_count{instance=~\"$instance\"}[5m])) == 0)) or vector(0)",
           "legendFormat": "p99 latency",
           "refId": "B"
         }
@@ -136,6 +136,14 @@
       },
       "fieldConfig": {
         "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "always",
+            "pointSize": 3
+          },
           "unit": "currencyTRY"
         },
         "overrides": []
@@ -171,7 +179,7 @@
             "type": "prometheus",
             "uid": "prometheus_ds"
           },
-          "expr": "rate(reporting_order_amount_cents_sum{instance=~\"$instance\"}[5m]) / 100",
+          "expr": "(sum(rate(reporting_order_amount_cents_sum{instance=~\"$instance\"}[5m])) / 100) or on() vector(0)",
           "legendFormat": "revenue/min",
           "refId": "A"
         }

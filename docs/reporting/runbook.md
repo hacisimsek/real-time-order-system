@@ -8,9 +8,12 @@ to fall back safely when the service is degraded.
 
 - **Cache-enabled endpoints**  
   - `GET /reports/orders/totals` and `GET /reports/orders/top-customers` are cached.
-  - Cache manager: `Caffeine` via `CacheConfig` (`backend/reporting-service/.../CacheConfig.java`).
+  - Cache provider: `Caffeine` (default) or `Redis` (optional) via `CacheConfig` (`backend/reporting-service/.../CacheConfig.java`).
+  - Switch provider: set `APP_REPORTING_CACHE_PROVIDER=redis` (or `caffeine`) and restart the reporting service.
   - Cache names: `reportTotals`, `reportTopCustomers` (`ReportCacheNames` constants).
   - Defaults: TTL 60s, max 500 entries (override via `APP_REPORTING_CACHE_TTL` / `APP_REPORTING_CACHE_MAX_SIZE`).
+  - Note: `APP_REPORTING_CACHE_MAX_SIZE` only applies to Caffeine; Redis cache does not enforce a per-cache max size here.
+  - Demo note: Redis cache uses typed JSON (`@class`) so cached DTOs deserialize correctly (no `LinkedHashMap` cast issues).
 - **Database indexes**  
   - `orders` table now has `idx_orders_created_at` and `idx_orders_created_customer`
     (`backend/order-service/.../V3__reporting_indexes.sql`) to accelerate high-cardinality
@@ -30,6 +33,10 @@ to fall back safely when the service is degraded.
 
 > Manual flushes are rarely needed because TTL is short, but flushing is useful after
 > backfills or when reconciling historic data.
+>
+> If you change the cache provider or cache serialization (e.g., after a code change),
+> you may need to flush `reportTotals` / `reportTopCustomers` once to avoid 500s caused by
+> stale Redis entries.
 
 ## 3. Snapshot Refresh & Fallback Procedures
 
@@ -74,7 +81,18 @@ to fall back safely when the service is degraded.
 - **JWT wiring:** On every dev boot the service logs `SecurityDiagnosticsRunner` output (issuer, audience, secret count). Pair this with the default `DEBUG` levels for `com.hacisimsek.security` and `org.springframework.security` to trace rejected tokens (`FilterChainProxy` entries will indicate which check failed).
 - **Dashboard:** `deploy/observability/dashboards/reporting-overview.json`
 
-## 6. Alert Rules
+## 6. Monitoring Validation Checklist (Local Demo)
+
+- **Prometheus targets:** `http://localhost:9090/targets` shows `reporting-service` and `rabbitmq` up.
+- **Grafana dashboards:** `Reporting Overview` and `RTOS Services Overview` load without errors.
+- **Key PromQL checks:**
+  - Throughput: `rate(reporting_orders_processed_total[5m])`
+  - Staleness: `time() - reporting_last_order_timestamp_seconds`
+  - Queue depth: `rabbitmq_queue_messages_ready{queue="dev.reporting.order-created"}`
+- **RabbitMQ metrics labels:** `rabbitmq_queue_messages_ready` includes the `queue` label; if missing, verify `deploy/rabbitmq/rabbitmq.conf`.
+- **Alerts loaded:** `http://localhost:9090/alerts` shows `Reporting*` alerts from `deploy/observability/alerts.yml`.
+
+## 7. Alert Rules
 
 Prometheus (`deploy/observability/alerts.yml`) fires the following alerts:
 

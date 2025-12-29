@@ -11,7 +11,7 @@ groups:
           description: Prometheus has not scraped the reporting-service job for 1 minute.
 
       - alert: ReportingProcessingLatencyHigh
-        expr: histogram_quantile(0.95, rate(reporting_order_processing_latency_bucket[5m])) > 2
+        expr: histogram_quantile(0.95, sum by (le) (rate(reporting_order_processing_latency_seconds_bucket[5m]))) > 2
         for: 2m
         labels:
           severity: warning
@@ -36,3 +36,14 @@ groups:
         annotations:
           summary: Reporting queue backlog growing
           description: dev.reporting.order-created queue has more than 100 ready messages for 5 minutes.
+
+  - name: core-services.rules
+    rules:
+      - alert: CoreServiceDown
+        expr: up{job=~"order-service|inventory-service|notification-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Core service instance is unreachable
+          description: Prometheus has not scraped a core service for 1 minute.

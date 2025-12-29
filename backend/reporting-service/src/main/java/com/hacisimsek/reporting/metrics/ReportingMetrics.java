@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class ReportingMetrics {
 
     private final Counter ordersProcessed;
+    private final Counter ordersFailed;
     private final DistributionSummary orderAmountSummary;
     private final Timer processingLatency;
     private final AtomicLong lastOrderTimestampSeconds;
@@ -21,6 +22,12 @@ public class ReportingMetrics {
         this.ordersProcessed = Counter.builder("reporting_orders_processed_total")
                 .description("Total number of order events processed by the reporting service")
                 .tag("source", "order.events")
+                .register(registry);
+
+        this.ordersFailed = Counter.builder("reporting_orders_failed_total")
+                .description("Total number of order events that failed processing in reporting")
+                .tag("source", "order.events")
+                .tag("reason", "exception")
                 .register(registry);
 
         this.orderAmountSummary = DistributionSummary.builder("reporting_order_amount_cents")
@@ -51,5 +58,9 @@ public class ReportingMetrics {
         }
 
         lastOrderTimestampSeconds.set(processedTimestamp.getEpochSecond());
+    }
+
+    public void recordOrderFailed() {
+        ordersFailed.increment();
     }
 }

@@ -167,12 +167,13 @@ Micrometer publishes metrics used by the Grafana dashboard under the `reporting_
 
 **Performance & Caching**
 
-- `GET /reports/orders/totals` and `GET /reports/orders/top-customers` responses are cached via Caffeine (TTL 60s, max 500 entries by default). Override with `APP_REPORTING_CACHE_TTL` / `APP_REPORTING_CACHE_MAX_SIZE` in `.env`.
+- `GET /reports/orders/totals` and `GET /reports/orders/top-customers` responses are cached (Caffeine by default; Redis optional). Configure with `APP_REPORTING_CACHE_PROVIDER` (`caffeine` or `redis`) and tune with `APP_REPORTING_CACHE_TTL` / `APP_REPORTING_CACHE_MAX_SIZE` in `.env`.
 - Manual cache flush: `curl -X DELETE http://localhost:8084/actuator/caches/reportTotals` (or `reportTopCustomers`).
 - Reporting-friendly indexes live in `backend/order-service/src/main/resources/db/migration/V3__reporting_indexes.sql` and must be applied wherever the `orders` table exists.
 - Requirements & data-mapping reference: `docs/reporting/requirements.md`.
 - Dashboard coverage & drill-down links: `docs/reporting/dashboard.md`.
 - Operational runbook (cache tuning, refresh cadence, fallback steps): `docs/reporting/runbook.md`.
+- Presentation (slide outline + demo script): `docs/overview/presentation-guide.md`.
 - Container hardening checklist (multi-stage builds, non-root users, healthchecks): `docs/containerization/baseline.md`.
 - Container release & rollback playbook: `docs/containerization/release.md`.
 - Runtime guide (Docker vs local workflows + metrics checklist): `docs/setup/running.md`.

@@ -7,6 +7,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class CacheProps {
 
     /**
+     * Cache provider to use. Defaults to in-memory Caffeine; set to "redis" for distributed cache.
+     */
+    private String provider = "caffeine";
+
+    /**
      * Cache entry time-to-live; defaults to one minute to balance freshness and performance.
      */
     private Duration ttl = Duration.ofSeconds(60);
@@ -18,6 +23,16 @@ public class CacheProps {
 
     public Duration getTtl() {
         return ttl;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        if (provider != null && !provider.isBlank()) {
+            this.provider = provider.trim();
+        }
     }
 
     public void setTtl(Duration ttl) {

@@ -15,4 +15,4 @@ jobs:
       - name: Build backend modules
         run: mvn -q -DskipTests -f backend/pom.xml clean package
       - name: Run unit tests
-        run: mvn -q -f backend/pom.xml test || true
+        run: mvn -q -f backend/pom.xml test

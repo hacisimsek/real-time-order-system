@@ -32,11 +32,16 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
 management:
   endpoints:
     web:
       exposure:
-        include: "health,info,prometheus"
+        include: "health,info,prometheus,caches"
   endpoint:
     health:
       probes:
@@ -64,6 +69,7 @@ app:
     auto-refresh-enabled: ${APP_REPORTING_AUTO_REFRESH:true}
     refresh-cron: ${APP_REPORTING_REFRESH_CRON:0 0 1 * * *}
     cache:
+      provider: ${APP_REPORTING_CACHE_PROVIDER:caffeine}
       ttl: ${APP_REPORTING_CACHE_TTL:60s}
       maximum-size: ${APP_REPORTING_CACHE_MAX_SIZE:500}
 

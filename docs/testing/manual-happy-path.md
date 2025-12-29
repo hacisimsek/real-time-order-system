@@ -22,6 +22,7 @@ Copy the `Bearer …` token (valid for 1 hour). Use it as `<DEV_TOKEN>` below (a
 - Import `docs/postman/rtos.postman_collection.json` plus `docs/postman/rtos-local.postman_environment.json`.
 - Select the **RTOS Local** environment, paste the raw JWT **without** `Bearer ` into the `jwt` variable. The collection already adds the `Bearer` prefix.
 - The collection mirrors the curl steps below, so you can iterate quickly without retyping headers. The generated dev token now includes reporting roles, so the same token works for `/reports/**` calls.
+- Tip: Start with the **Health** folder to confirm all services are `UP`, then run **Inventory → Orders → Reporting**, and optionally **Ops (DLQ Replay)**.
 
 ## 3. Seed Inventory
 ```bash

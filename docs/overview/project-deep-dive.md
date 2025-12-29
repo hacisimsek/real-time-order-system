@@ -28,6 +28,7 @@ flowchart LR
     subgraph Infra
         Postgres[(PostgreSQL)]
         Rabbit[(RabbitMQ)]
+        Redis[(Redis)]
         Prometheus[(Prometheus)]
         Grafana[(Grafana)]
     end
@@ -37,6 +38,7 @@ flowchart LR
     Order --> Postgres
     Inventory --> Postgres
     Reporting --> Postgres
+    Reporting --> Redis
     Order --> Rabbit
     Inventory --> Rabbit
     Notification --> Rabbit
@@ -55,14 +57,14 @@ flowchart LR
 | Order | Spring Boot, PostgreSQL, RabbitMQ, Flyway, Micrometer | Sipariş CRUD, **Outbox + Rabbit** publisher |
 | Inventory | Spring Boot, PostgreSQL, RabbitMQ | Stok güncelleme, rezervasyon süreçleri |
 | Notification | Spring Boot, RabbitMQ | Dummy e-posta/SMS/push bildirim tüketicisi |
-| Reporting | Spring Boot, PostgreSQL, RabbitMQ, Caffeine Cache | Günlük/haftalık/aylık raporlar + CSV export |
+| Reporting | Spring Boot, PostgreSQL, RabbitMQ, Cache (Redis/Caffeine) | Günlük/haftalık/aylık raporlar + CSV export |
 
 ---
 
 ## 3. İzlenen Fazlar ve Çıktıları
 
 ### 3.1 Çekirdek Servisler (Order / Inventory / Notification)
-- Spring Boot 3.5, Maven ve Flyway kullanılarak domain odaklı servisler kuruldu.
+- Spring Boot 3.5.5, Maven ve Flyway kullanılarak domain odaklı servisler kuruldu.
 - Outbox pattern ile Order servisinden çıkan olayların güvenilir şekilde RabbitMQ’ya iletilmesi sağlandı.
 
 ### 3.2 Güvenlik
@@ -72,7 +74,7 @@ flowchart LR
 ### 3.3 Raporlama (Nov 22 – Dec 5 fazı)
 - `reporting-service`:
   - RabbitMQ dinleyicisi (`OrderEventsListener`) ile mesaj log’u ve rollup tabloları güncellenir.
-  - `ReportService` Caffeine cache ile totals/top-customers sonuçlarını 60 sn boyunca saklar.
+- `ReportService` totals/top-customers sonuçlarını cache'ler (TTL 60 sn); provider `APP_REPORTING_CACHE_PROVIDER` ile seçilir: Caffeine (default) veya Redis (deploy `.env` varsayılanı).
   - REST API + CSV exporter + refresh endpoint’leri güvenlik rollerine göre ayrılır (`ROLE_REPORTING_READ`, `ROLE_REPORTING_EXPORT`).
   - Dashboard + runbook + requirements dökümanları: `docs/reporting/*`.
 
@@ -88,10 +90,10 @@ flowchart LR
 
 | Katman | Teknoloji / Araç | Açıklama |
 |--------|------------------|----------|
-| Backend | Java 17, Spring Boot 3.5, Maven | Mikroservisler |
+| Backend | Java 17, Spring Boot 3.5.5, Maven | Mikroservisler |
 | Veri Tabanı | PostgreSQL + Flyway | Persistans ve şema yönetimi |
 | Mesajlaşma | RabbitMQ, Spring AMQP | Event-driven iletişim |
-| Cache | Caffeine (Reporting) | Totals/top-customers caching |
+| Cache | Redis (deploy default) / Caffeine | Totals/top-customers caching |
 | Güvenlik | JWT, Spring Security | Ortak `common-security` modülü |
 | Konteyner | Docker, Docker Compose | Çok aşamalı build + healthcheck |
 | Observability | Micrometer, Prometheus, Grafana | Metrikler, paneller, alert kuralları |
@@ -102,7 +104,7 @@ flowchart LR
 ## 5. Süreç Yönetimi ve Geliştirme Yaklaşımı
 
 - **Branch/Commit stratejisi:** Kodlar lokal olarak test edildikten sonra `main` branch’ine gönderilmeye hazır hale getiriliyor. (CI/CD fazı sonraki sprintte ele alınacak.)
-- **Test yaklaşımı:** Her servis için `mvn -pl <service> -am test` komutları çalıştırılıyor. Mockito + Spring Boot testleri ile API güvenliği ve servis mantığı doğrulanıyor.
+- **Test yaklaşımı:** Testler ağırlıklı olarak order ve reporting servislerinde; Mockito + Spring Boot testleri ile kritik iş akışları ve API güvenliği doğrulanıyor.
 - **Performans doğrulaması:** `docs/reporting/runbook.md` ve `docs/setup/runtime-technical.md` içinde yer alan senaryolarla load, latency ve queue backlog gözlemleniyor.
 
 ---
@@ -115,7 +117,7 @@ flowchart LR
 3. `docker compose up -d order-service ... reporting-service`
 4. Aktiflik kontrolü: `curl http://localhost:8084/actuator/health`
 5. Dev token: `docker compose logs order-service | grep "DEV ADMIN TOKEN"` (1 saat geçerli)
-6. Grafana: `http://localhost:3000` (şifre `GF_SECURITY_ADMIN_*` değişkenleriyle tanımlanır; varsayılan `admin`/`admin`), “Reporting Overview” dashboard’u.
+6. Grafana: `http://localhost:3000` (şifre `GF_SECURITY_ADMIN_*` değişkenleriyle tanımlanır; varsayılan `admin`/`admin`), `rtos-services` ve `reporting-overview` dashboard’ları.
 7. Prometheus alertleri: `http://localhost:9090/alerts`.
 
 ### 6.2 IntelliJ/Spring Boot Run
@@ -126,7 +128,7 @@ flowchart LR
 
 ### 6.3 Ana Metrikler
 - `reporting_orders_processed_total`
-- `reporting_order_processing_latency_bucket`
+- `reporting_order_processing_latency_seconds_bucket`
 - `reporting_order_amount_cents_sum`
 - `reporting_last_order_timestamp_seconds`
 - `rabbitmq_queue_messages_ready{queue="dev.reporting.order-created"}`
@@ -134,6 +136,7 @@ flowchart LR
 ### 6.4 Alert Kuralları (deploy/observability/alerts.yml)
 | Alert | Koşul | Önemi | Aksiyon |
 |-------|-------|--------|---------|
+| CoreServiceDown | `up==0` 1 dk | Critical | Order/Inventory/Notification konteyner/log incele, yeniden başlat |
 | ReportingServiceDown | `up==0` 1 dk | Critical | Container/log incele, yeniden başlat |
 | ReportingProcessingLatencyHigh | p95 >2s 2 dk | Warning | Rabbit backlog + DB load kontrolü |
 | ReportingStalenessHigh | 5 dk yeni event yok | Critical | Rabbit bağlantısı, refresh tetikle |
@@ -148,5 +151,7 @@ flowchart LR
 - **Reporting modülü**: Rollup/Snapshot + Caffeine cache + CSV export ile operasyonel raporlama ihtiyacı karşılandı.
 - **Container Baseline** projeyi prod’a hazır hale getiren en kritik adımdı: non-root kullanıcı, healthcheck, multi-stage build.
 - **Observability**: Prometheus/Grafana + alert kuralları projenin “yaşayan” metriklerini izlenebilir kıldı.
+
+Tek sayfalık teknik sınırlar ve kapsam için `docs/analysis/technical-boundaries.md` dosyasına bakabilirsin.
 
 Bu belgeyi tamamladığında, projenin ne yaptığı, hangi teknolojileri nasıl kullandığı ve işletim açısından nasıl yönetileceği konusunda net bir fikir edinmiş olman gerekir. Detaylı komutlar ve diyagramlar için referans bağlantıları README’de listelenmiştir. Soruların olursa veya belirli bir fazın daha derin anlatımını istersen hemen haber ver!

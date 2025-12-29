@@ -96,6 +96,24 @@
       "item": [
         {
           "name": "Adjust Inventory",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const poolRaw = pm.environment.get('sku_pool');",
+                  "if (poolRaw) {",
+                  "  const pool = poolRaw.split(',').map(s => s.trim()).filter(Boolean);",
+                  "  if (pool.length) {",
+                  "    const pick = pool[Math.floor(Math.random() * pool.length)];",
+                  "    pm.environment.set('inventory_sku', pick);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -146,6 +164,27 @@
       "item": [
         {
           "name": "Create Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const mode = (pm.environment.get('sku_mode') || '').toLowerCase();",
+                  "if (mode === 'order') {",
+                  "  const poolRaw = pm.environment.get('sku_pool');",
+                  "  if (poolRaw) {",
+                  "    const pool = poolRaw.split(',').map(s => s.trim()).filter(Boolean);",
+                  "    if (pool.length) {",
+                  "      const pick = pool[Math.floor(Math.random() * pool.length)];",
+                  "      pm.environment.set('inventory_sku', pick);",
+                  "    }",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [

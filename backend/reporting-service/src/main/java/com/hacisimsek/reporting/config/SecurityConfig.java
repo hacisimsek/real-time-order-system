@@ -27,6 +27,7 @@ public class SecurityConfig {
         http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/error").permitAll()
                 .requestMatchers(HttpMethod.GET, "/reports/orders/export")
                 .hasAuthority(Roles.REPORTING_EXPORT)
                 .requestMatchers(HttpMethod.GET, "/reports/**")

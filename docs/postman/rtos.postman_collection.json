@@ -3,7 +3,7 @@
     "_postman_id": "rtos-local-collection",
     "name": "RTOS Local Manual Tests",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Local manual smoke tests for Real-Time Order System. Use with the RTOS Local environment."
+    "description": "Local manual smoke tests for Real-Time Order System (demo/learning).\n\nHow to use:\n1) Start the stack via Docker Compose.\n2) Copy the \"DEV ADMIN TOKEN\" from `docker compose logs order-service`.\n3) Paste the raw JWT (WITHOUT the `Bearer ` prefix) into the Postman environment variable `jwt`.\n4) Run requests in order: Health -> Inventory seed -> Create order -> Fulfil -> Reporting -> (Optional) Ops replay."
   },
   "auth": {
     "type": "bearer",
@@ -17,10 +17,89 @@
   },
   "item": [
     {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Order Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{order_base}}/actuator/health",
+              "host": ["{{order_base}}"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Inventory Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base}}/actuator/health",
+              "host": ["{{inventory_base}}"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Notification Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{notification_base}}/actuator/health",
+              "host": ["{{notification_base}}"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reporting Health",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base}}/actuator/health",
+              "host": ["{{reporting_base}}"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "Inventory",
       "item": [
         {
           "name": "Adjust Inventory",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const poolRaw = pm.environment.get('sku_pool');",
+                  "if (poolRaw) {",
+                  "  const pool = poolRaw.split(',').map(s => s.trim()).filter(Boolean);",
+                  "  if (pool.length) {",
+                  "    const pick = pool[Math.floor(Math.random() * pool.length)];",
+                  "    pm.environment.set('sku', pick);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [
@@ -31,7 +110,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"delta\": 20,\n  \"reason\": \"seed\"\n}"
+              "raw": "{\n  \"delta\": {{seed_delta}},\n  \"reason\": \"{{seed_reason}}\"\n}"
             },
             "url": {
               "raw": "{{inventory_base}}/inventory/{{sku}}/adjust",
@@ -74,6 +153,25 @@
           "name": "Create Order",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const mode = (pm.environment.get('sku_mode') || '').toLowerCase();",
+                  "if (mode === 'order') {",
+                  "  const poolRaw = pm.environment.get('sku_pool');",
+                  "  if (poolRaw) {",
+                  "    const pool = poolRaw.split(',').map(s => s.trim()).filter(Boolean);",
+                  "    if (pool.length) {",
+                  "      const pick = pool[Math.floor(Math.random() * pool.length)];",
+                  "      pm.environment.set('sku', pick);",
+                  "    }",
+                  "  }",
+                  "}"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -96,7 +194,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customerId\": \"{{customer_id}}\",\n  \"amountCents\": {{amount_cents}},\n  \"currency\": \"{{currency}}\",\n  \"items\": [\n    { \"sku\": \"{{sku}}\", \"qty\": 1 }\n  ]\n}"
+              "raw": "{\n  \"customerId\": \"{{customer_id}}\",\n  \"amountCents\": {{amount_cents}},\n  \"currency\": \"{{currency}}\",\n  \"items\": [\n    { \"sku\": \"{{sku}}\", \"qty\": {{qty}} }\n  ]\n}"
             },
             "url": {
               "raw": "{{order_base}}/orders",
@@ -190,6 +288,31 @@
           "response": []
         },
         {
+          "name": "Export CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base}}/reports/orders/export?period={{period}}",
+              "host": [
+                "{{reporting_base}}"
+              ],
+              "path": [
+                "reports",
+                "orders",
+                "export"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Totals",
           "request": {
             "method": "GET",
@@ -220,7 +343,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{reporting_base}}/reports/orders/top-customers?limit=5",
+              "raw": "{{reporting_base}}/reports/orders/top-customers?period={{period}}&limit=5",
               "host": [
                 "{{reporting_base}}"
               ],
@@ -231,9 +354,50 @@
               ],
               "query": [
                 {
+                  "key": "period",
+                  "value": "{{period}}"
+                },
+                {
                   "key": "limit",
                   "value": "5"
                 }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Ops (DLQ Replay)",
+      "item": [
+        {
+          "name": "Inventory Replay DLQ",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_base}}/ops/replay/{{inventory_order_created_dlq}}?max={{replay_max}}",
+              "host": ["{{inventory_base}}"],
+              "path": ["ops", "replay", "{{inventory_order_created_dlq}}"],
+              "query": [
+                { "key": "max", "value": "{{replay_max}}" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reporting Replay DLQ",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{reporting_base}}/ops/replay/{{reporting_order_created_dlq}}?max={{replay_max}}",
+              "host": ["{{reporting_base}}"],
+              "path": ["ops", "replay", "{{reporting_order_created_dlq}}"],
+              "query": [
+                { "key": "max", "value": "{{replay_max}}" }
               ]
             }
           },

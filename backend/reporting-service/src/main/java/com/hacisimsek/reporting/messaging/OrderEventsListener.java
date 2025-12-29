@@ -68,7 +68,8 @@ public class OrderEventsListener {
             channel.basicAck(deliveryTag, false);
         } catch (Exception ex) {
             log.error("Failed to process order event message {}", messageId, ex);
-            channel.basicNack(deliveryTag, false, true);
+            metrics.recordOrderFailed();
+            channel.basicNack(deliveryTag, false, false);
         }
     }
 
