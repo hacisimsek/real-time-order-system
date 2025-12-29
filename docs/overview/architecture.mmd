@@ -1,0 +1,32 @@
+graph LR
+  subgraph Clients
+    Client["Client / API Consumer (Postman)"]
+  end
+
+  subgraph Core
+    Order["Order Service (REST + Auth)"]
+    Broker["RabbitMQ (Topic Exchange: order.events)"]
+  end
+
+  subgraph Consumers
+    Inventory["Inventory Service"]
+    Notification["Notification Service"]
+    Reporting["Reporting Service"]
+  end
+
+  subgraph Data
+    Postgres["PostgreSQL"]
+    Redis["Redis (Reporting Cache)"]
+  end
+
+  Client -->|REST (JWT)| Order
+  Order -->|Publish events| Broker
+
+  Broker -->|order.created.v1\norder.status-changed.v1| Inventory
+  Broker -->|order.created.v1\norder.status-changed.v1| Notification
+  Broker -->|order.created.v1| Reporting
+
+  Order --> Postgres
+  Inventory --> Postgres
+  Reporting --> Postgres
+  Reporting -.->|Optional cache| Redis

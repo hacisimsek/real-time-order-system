@@ -1,0 +1,133 @@
+{
+  "id": null,
+  "uid": "rtos-services",
+  "title": "RTOS Services Overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "label": "Service",
+        "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+        "query": "label_values(http_server_requests_seconds_count, application)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {}
+      },
+      {
+        "name": "queue",
+        "type": "query",
+        "label": "Queue",
+        "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+        "query": "label_values(rabbitmq_queue_messages_ready, queue)",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": true,
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Request Rate (req/s)",
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(http_server_requests_seconds_count{application=~\"$service\"}[1m]))"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Services Receiving Traffic (last 5m)",
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "none" },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "B",
+          "expr": "count(sum by (application) (rate(http_server_requests_seconds_count{application=~\"$service\"}[5m])) > 0)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Rate (5xx)",
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "refId": "B",
+          "expr": "sum(rate(http_server_requests_seconds_count{application=~\"$service\",status=~\"5..\"}[5m])) by (application, uri)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "p95 Latency (ms)",
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{application=~\"$service\"}[5m])) by (le, application)) * 1000"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rabbit Queue Depth (ready messages)",
+      "datasource": { "type": "prometheus", "uid": "prometheus_ds" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 12 },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "refId": "E",
+          "expr": "rabbitmq_queue_messages_ready{queue=~\"$queue\"}"
+        }
+      ]
+    }
+  ]
+}
