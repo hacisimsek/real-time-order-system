@@ -7,7 +7,7 @@ RTOS is a microservice-based reference implementation for processing customer or
 - **Services**: API Gateway, Order (publish events), Inventory (reserve/release stock), Notification (mock notifications), Reporting (rollups/exports)
 - **Messaging**: RabbitMQ with retry and DLQ support
 - **Persistence**: PostgreSQL
-- **Caching / future work**: Redis
+- **Caching**: Caffeine (default) or Redis (optional)
 - **Observability**: Micrometer → Prometheus → Grafana
 - **Reliability patterns**: Outbox pattern, manual acknowledgements, idempotency store, DLQ replay utility
 
@@ -84,7 +84,7 @@ docker compose version
    Install the shared security library once, then execute each service’s suite. The `HOME` export keeps Maven’s cache inside the repo.
    ```bash
    # from the repo root
-   backend/order-service/mvnw -q -f ../common-security/pom.xml install
+   backend/order-service/mvnw -q -f backend/common-security/pom.xml install
 
    RABBIT_USER=rtos RABBIT_PASS=rtos HOME=$(git rev-parse --show-toplevel) \
      backend/order-service/mvnw -q test
@@ -113,8 +113,8 @@ docker compose version
      -H 'Authorization: Bearer <DEV_TOKEN>' \
      -d '{"customerId":"C-1001","amountCents":1999,"currency":"TRY","items":[{"sku":"ABC-001","qty":1}]}'
 
-   # Update the order status
-   curl -s -X PATCH http://localhost:8080/orders/1/status \
+   # Update the order status (use the id from the create response)
+   curl -s -X PATCH http://localhost:8080/orders/<ORDER_ID>/status \
      -H 'Content-Type: application/json' \
      -H 'Authorization: Bearer <DEV_TOKEN>' \
      -d '{"status":"FULFILLED"}'
@@ -168,7 +168,7 @@ The following endpoints back dashboards and exports:
 
 Micrometer publishes metrics used by the Grafana dashboard under the `reporting_*` namespace (`reporting_orders_processed_total`, `reporting_order_processing_latency`, `reporting_order_amount_cents`, `reporting_last_order_timestamp_seconds`). Import the dashboard located at `deploy/observability/dashboards/reporting-overview.json` to visualise throughput, latency, and export activity.
 
-> **Auth diagnostics**: When the service boots with `SPRING_PROFILES_ACTIVE=dev`, `SecurityDiagnosticsRunner` logs the issuer, audience, and number of configured secrets (e.g. `Reporting security config → issuer='rtos' ...`). Combined with the now-default `DEBUG` logging for `com.hacisimsek.security` and `org.springframework.security`, this makes it easy to pinpoint token wiring issues directly from `docker compose logs reporting-service`.
+> **Auth diagnostics**: When the service boots with `SPRING_PROFILES_ACTIVE=dev`, `SecurityDiagnosticsRunner` logs the issuer, audience, and number of configured secrets (e.g. `Reporting security config → issuer='rtos' ...`). Combined with the now-default `DEBUG` logging for `com.hacisimsek.rtos.security` and `org.springframework.security`, this makes it easy to pinpoint token wiring issues directly from `docker compose logs reporting-service`.
 
 **Performance & Caching**
 
