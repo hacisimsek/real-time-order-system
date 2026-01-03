@@ -1,0 +1,104 @@
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+
+spring:
+  application:
+    name: api-gateway
+  http:
+    codecs:
+      max-in-memory-size: 256KB
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 5000
+            response-timeout: 10s
+          routes:
+            - id: order-service
+              uri: ${ORDER_SERVICE_URL:http://localhost:8081}
+              predicates:
+                - Path=/orders/**
+            - id: inventory-service
+              uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+              predicates:
+                - Path=/inventory/**
+            - id: reporting-service
+              uri: ${REPORTING_SERVICE_URL:http://localhost:8084}
+              predicates:
+                - Path=/reports/**
+          globalcors:
+            add-to-simple-url-handler-mapping: true
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns: "*"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - PATCH
+                  - DELETE
+                  - OPTIONS
+                  - HEAD
+                allowedHeaders:
+                  - Authorization
+                  - Content-Type
+                  - X-Client-Id
+                  - X-Request-Id
+                allowCredentials: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,prometheus"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+  observations:
+    key-values:
+      application: ${spring.application.name}
+
+app:
+  security:
+    issuer: rtos
+    audience: rtos-clients
+    secrets:
+      - ${JWT_SECRET:dev-change-this-32B-min-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}
+  gateway:
+    max-body-bytes: 262144
+    public-paths:
+      - /actuator
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+      - HEAD
+    rate-limits:
+      orders:
+        per-minute: 120
+        burst-seconds: 10
+        global-per-minute: 1200
+      inventory:
+        per-minute: 240
+        burst-seconds: 10
+        global-per-minute: 2400
+      reports:
+        per-minute: 120
+        burst-seconds: 10
+        global-per-minute: 1200
+      fallback:
+        per-minute: 60
+        burst-seconds: 10
+        global-per-minute: 600

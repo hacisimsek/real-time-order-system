@@ -9,6 +9,7 @@ in a technical presentation.
 ```mermaid
 sequenceDiagram
     participant Client as Client / CLI
+    participant Gateway as API Gateway
     participant Order as Order Service
     participant Inventory as Inventory Service
     participant Rabbit as RabbitMQ
@@ -16,13 +17,15 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Prom as Prometheus
 
-    Client->>Order: POST /orders (JWT)
+    Client->>Gateway: POST /orders (JWT)
+    Gateway->>Order: POST /orders
     Order->>DB: Store order + outbox
     Order->>Rabbit: Publish order.created.v1
     Rabbit->>Inventory: Consume reserve event
     Rabbit->>Reporting: Consume order.created.v1
     Reporting->>DB: Update rollups / snapshots
-    Client->>Reporting: GET /reports/orders
+    Client->>Gateway: GET /reports/orders
+    Gateway->>Reporting: GET /reports/orders
     Reporting->>DB: Read snapshots
     Reporting-->>Client: JSON + metrics headers
     Prom-->>Order: scrape /actuator/prometheus
@@ -71,12 +74,12 @@ sequenceDiagram
 1. **Seed data**
    ```bash
    DEV_TOKEN="Bearer <paste-dev-token>"
-   curl -s -X PUT http://localhost:8083/inventory/ABC-001/adjust \
+   curl -s -X PUT http://localhost:8080/inventory/ABC-001/adjust \
      -H 'Content-Type: application/json' \
      -H "Authorization: ${DEV_TOKEN}" \
      -d '{"delta": 100, "reason": "demo"}'
    for i in $(seq 1 25); do
-     curl -s -X POST http://localhost:8081/orders \
+     curl -s -X POST http://localhost:8080/orders \
        -H "Authorization: ${DEV_TOKEN}" \
        -H 'Content-Type: application/json' \
        -d "{\"customerId\":\"C-$i\",\"amountCents\":1599,\"currency\":\"TRY\",\"items\":[{\"sku\":\"ABC-001\",\"qty\":1}]}" > /dev/null
@@ -95,6 +98,7 @@ sequenceDiagram
 Sample `docker compose ps` (healthy state):
 ```
 NAME                  COMMAND                  STATE     PORTS
+api-gateway           "sh -c 'java …'"         healthy   0.0.0.0:8080->8080/tcp
 order-service         "sh -c 'java …'"         healthy   0.0.0.0:8081->8081/tcp
 reporting-service     "sh -c 'java …'"         healthy   0.0.0.0:8084->8084/tcp
 prometheus            "/bin/prometheus …"      running   0.0.0.0:9090->9090/tcp

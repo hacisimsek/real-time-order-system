@@ -15,7 +15,7 @@ This page summarizes the current status against the 20-week plan defined in `202
 | 1. Planning & Analysis | Aug 16 - Sep 5 | Complete | Scope, architecture, and docs are in place |
 | 2. Core Microservices Development | Sep 6 - Oct 17 | Complete | Order/Inventory/Notification services are active |
 | 3. Messaging Infrastructure | Oct 18 - Nov 7 | Complete | RabbitMQ, outbox, retry/DLQ, idempotency are implemented |
-| 4. Security Implementation | Nov 8 - Nov 21 | Partial | JWT + RBAC done; API Gateway is documentation-only |
+| 4. Security Implementation | Nov 8 - Nov 21 | Complete | JWT + RBAC done; API Gateway enforcement added |
 | 5. Reporting Service | Nov 22 - Dec 5 | Complete | Reporting service, export endpoints, runbook available |
 | 6. Containerization & Orchestration | Dec 6 - Dec 19 | Partial | Docker Compose + observability done; Minikube/K8s not implemented |
 | 7. Testing, CI/CD & Production Deployment | Dec 20 - Dec 27 | Partial | Manual tests exist; CI/CD and production go-live not done |
@@ -30,7 +30,6 @@ This page summarizes the current status against the 20-week plan defined in `202
 - Minikube / Kubernetes orchestration not implemented.
 - CI/CD pipeline not implemented.
 - Production go-live not executed.
-- API Gateway enforcement not implemented (policies documented only).
 
 ## 5) Rationale
 - Workload constraints and an earlier-than-planned presentation date delayed later phases.

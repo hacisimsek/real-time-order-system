@@ -15,7 +15,7 @@ Bu sayfa, `2025_Performance_Targets_Haci_Simsek.md` icindeki 20 haftalik plan re
 | 1. Planlama & Analiz | Aug 16 - Sep 5 | Tamam | Mimari, kapsam ve dokumantasyonlar hazir |
 | 2. Core Microservices | Sep 6 - Oct 17 | Tamam | Order/Inventory/Notification servisleri aktif |
 | 3. Messaging Infrastructure | Oct 18 - Nov 7 | Tamam | RabbitMQ, outbox, retry/DLQ ve idempotency mevcut |
-| 4. Security Implementation | Nov 8 - Nov 21 | Kismen | JWT + RBAC tamam; API Gateway yalnizca politika dokumani |
+| 4. Security Implementation | Nov 8 - Nov 21 | Tamam | JWT + RBAC tamam; API Gateway enforcement eklendi |
 | 5. Reporting Service | Nov 22 - Dec 5 | Tamam | Raporlama servisi, export ve runbook mevcut |
 | 6. Containerization & Orchestration | Dec 6 - Dec 19 | Kismen | Docker Compose + observability tamam; Minikube/K8s yok |
 | 7. Testing, CI/CD & Production | Dec 20 - Dec 27 | Kismen | Manual testler var; CI/CD ve canliya cikis yok |
@@ -30,7 +30,6 @@ Bu sayfa, `2025_Performance_Targets_Haci_Simsek.md` icindeki 20 haftalik plan re
 - Minikube / Kubernetes orkestrasyonu uygulanmadi.
 - CI/CD boru hatti kurulmadi.
 - Uretim ortamina canli cikis yapilmadi.
-- API Gateway enforce edilmedi (yalnizca politika dokumani mevcut).
 
 ## 5) Aciklama (Nedenler)
 - Is yuklulukleri ve planlanan tarihten once yapilan sunum nedeniyle ileri fazlar ertelendi.

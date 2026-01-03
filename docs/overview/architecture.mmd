@@ -3,6 +3,10 @@ graph LR
     Client["Client / API Consumer (Postman)"]
   end
 
+  subgraph Edge
+    Gateway["API Gateway"]
+  end
+
   subgraph Core
     Order["Order Service (REST + Auth)"]
     Broker["RabbitMQ (Topic Exchange: order.events)"]
@@ -19,7 +23,10 @@ graph LR
     Redis["Redis (Reporting Cache)"]
   end
 
-  Client -->|REST (JWT)| Order
+  Client -->|REST (JWT)| Gateway
+  Gateway -->|/orders| Order
+  Gateway -->|/inventory| Inventory
+  Gateway -->|/reports| Reporting
   Order -->|Publish events| Broker
 
   Broker -->|order.created.v1\norder.status-changed.v1| Inventory

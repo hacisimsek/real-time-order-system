@@ -59,6 +59,28 @@ services:
     restart: unless-stopped
 
   # ========= APP SERVICES =========
+  api-gateway:
+    build:
+      context: ../backend
+      dockerfile: api-gateway/Dockerfile
+    image: rtos/api-gateway:dev
+    container_name: api-gateway
+    env_file: ./.env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      PORT: ${GATEWAY_HTTP_PORT}
+      ORDER_SERVICE_URL: http://order-service:8081
+      INVENTORY_SERVICE_URL: http://inventory-service:8083
+      REPORTING_SERVICE_URL: http://reporting-service:8084
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - order-service
+      - inventory-service
+      - reporting-service
+    ports: ["${GATEWAY_HTTP_PORT}:8080"]
+    networks: [rtos]
+    restart: unless-stopped
+
   order-service:
     build:
       context: ../backend
@@ -221,6 +243,7 @@ services:
       - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
     networks: [rtos]
     depends_on:
+      - api-gateway
       - order-service
       - inventory-service
       - notification-service

@@ -38,7 +38,7 @@ Project progress vs. the 20-week plan (with remaining items) is tracked in `docs
 ## 2) Slide Outline (copy/paste into slides)
 
 1. **Goal**: Real-time orders → events → downstream processing + reporting
-2. **Architecture**: 4 services (Order/Inventory/Notification/Reporting) + Postgres + RabbitMQ + Redis + Prometheus/Grafana
+2. **Architecture**: API Gateway + 4 services (Order/Inventory/Notification/Reporting) + Postgres + RabbitMQ + Redis + Prometheus/Grafana
 3. **Key flow**: REST order → DB → outbox → `order.events` → consumers
 4. **Reliability**: Outbox (publisher), manual ACK, idempotency store, DLQ/replay
 5. **Security**: JWT + RBAC roles (actuator health remains public)
@@ -46,7 +46,7 @@ Project progress vs. the 20-week plan (with remaining items) is tracked in `docs
 7. **Reporting**: snapshots/rollups + exports
 8. **Caching**: Reporting totals/top-customers cached (Caffeine or Redis)
 9. **Live demo**: happy path + metrics + (optional) DLQ ops
-10. **Wrap-up**: what you learned + next optional work (K8s/gateway/load tests)
+10. **Wrap-up**: what you learned + next optional work (K8s/load tests/WAF)
 
 > For ready-to-copy slide text (12 slides), see `docs/overview/slides-outline.md`.
 

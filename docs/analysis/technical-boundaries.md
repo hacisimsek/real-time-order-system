@@ -6,11 +6,11 @@ This document summarizes RTOS technical scope, architecture, dependencies, and o
 
 ## 1) Purpose and Scope
 - **Purpose:** Demonstrate real-time order processing, event-driven service communication, and a reporting pipeline.
-- **Scope:** Order, Inventory, Notification, Reporting services; Postgres, RabbitMQ, Redis, Prometheus, Grafana.
-- **Out of scope:** Payments/charging, shipping/fulfillment, external provider integrations, API gateway/WAF, production-scale hardening.
+- **Scope:** API Gateway; Order, Inventory, Notification, Reporting services; Postgres, RabbitMQ, Redis, Prometheus, Grafana.
+- **Out of scope:** Payments/charging, shipping/fulfillment, external provider integrations, WAF, production-scale hardening.
 
 ## 2) System Overview and Main Flow
-1. A client submits an order via REST (JWT) to the Order service.
+1. A client submits an order via REST (JWT) through the API Gateway to the Order service.
 2. Order data is stored in Postgres; an outbox event record is created in the same transaction.
 3. OutboxRelay publishes `order.created.v1` to the RabbitMQ `order.events` exchange.
 4. Inventory and Notification consume the event; Inventory updates reservations idempotently.
@@ -21,6 +21,7 @@ This document summarizes RTOS technical scope, architecture, dependencies, and o
 ```mermaid
 flowchart LR
     Client((Client / CLI))
+    Gateway[API Gateway]
     subgraph Core Services
         Order[Order Service]
         Inventory[Inventory Service]
@@ -34,9 +35,10 @@ flowchart LR
         Prometheus[(Prometheus)]
         Grafana[(Grafana)]
     end
-    Client --> Order
-    Client --> Inventory
-    Client --> Reporting
+    Client --> Gateway
+    Gateway --> Order
+    Gateway --> Inventory
+    Gateway --> Reporting
     Order --> Postgres
     Inventory --> Postgres
     Reporting --> Postgres
@@ -55,6 +57,7 @@ flowchart LR
 ## 3) Architecture and Service Responsibilities
 | Service | Port | Responsibility |
 |---|---:|---|
+| API Gateway | 8080 | JWT validation, routing, rate limiting, request validation |
 | Order | 8081 | Order CRUD, outbox event production |
 | Notification | 8082 | Event consumption, example notification flow |
 | Inventory | 8083 | Stock reservation, idempotent consumption |

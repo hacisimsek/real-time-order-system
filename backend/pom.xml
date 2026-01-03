@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.hacisimsek</groupId>
+    <groupId>com.hacisimsek.rtos</groupId>
     <artifactId>rtos-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -12,6 +12,7 @@
 
     <modules>
         <module>common-security</module>
+        <module>api-gateway</module>
         <module>order-service</module>
         <module>inventory-service</module>
         <module>notification-service</module>

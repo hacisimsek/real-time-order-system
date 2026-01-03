@@ -75,5 +75,5 @@ app:
 
 logging:
   level:
-    com.hacisimsek.security: DEBUG
+    com.hacisimsek.rtos.security: DEBUG
     org.springframework.security: DEBUG

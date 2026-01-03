@@ -4,7 +4,7 @@ RTOS is a microservice-based reference implementation for processing customer or
 
 ## At a Glance
 
-- **Services**: Order (publish events), Inventory (reserve/release stock), Notification (mock notifications)
+- **Services**: API Gateway, Order (publish events), Inventory (reserve/release stock), Notification (mock notifications), Reporting (rollups/exports)
 - **Messaging**: RabbitMQ with retry and DLQ support
 - **Persistence**: PostgreSQL
 - **Caching / future work**: Redis
@@ -16,9 +16,11 @@ RTOS is a microservice-based reference implementation for processing customer or
 ```
 real-time-order-system/
 ├─ backend/
+│  ├─ api-gateway/
 │  ├─ order-service/
 │  ├─ inventory-service/
-│  └─ notification-service/
+│  ├─ notification-service/
+│  └─ reporting-service/
 ├─ deploy/
 │  ├─ docker-compose.yml
 │  └─ observability/
@@ -58,13 +60,14 @@ docker compose version
 
 3. **Build and start application services**
    ```bash
-   docker compose build order-service notification-service inventory-service reporting-service
-   docker compose up -d order-service notification-service inventory-service reporting-service
+   docker compose build api-gateway order-service notification-service inventory-service reporting-service
+   docker compose up -d api-gateway order-service notification-service inventory-service reporting-service
    ```
    Prefer running locally from IntelliJ? Import the Maven project, then for each service (`backend/*-service`) create a Spring Boot run configuration pointing to the `...ServiceApplication` class, set `SPRING_PROFILES_ACTIVE=dev` and the DB/Rabbit env variables from `deploy/.env`, and press **Run**. Detailed environment exports live in `docs/setup/running.md#running-services-locally-no-docker-images`.
 
 4. **Check health endpoints**
    ```bash
+   curl -s http://localhost:8080/actuator/health
    curl -s http://localhost:8081/actuator/health
    curl -s http://localhost:8082/actuator/health
    curl -s http://localhost:8083/actuator/health
@@ -99,36 +102,38 @@ docker compose version
 7. **Manual end-to-end smoke test**
    ```bash
    # Seed inventory
-   curl -s -X PUT http://localhost:8083/inventory/ABC-001/adjust \
+   curl -s -X PUT http://localhost:8080/inventory/ABC-001/adjust \
      -H 'Content-Type: application/json' \
+     -H 'Authorization: Bearer <DEV_TOKEN>' \
      -d '{"delta": 20, "reason": "seed"}'
 
    # Create an order
-   curl -s -X POST http://localhost:8081/orders \
+   curl -s -X POST http://localhost:8080/orders \
      -H 'Content-Type: application/json' \
      -H 'Authorization: Bearer <DEV_TOKEN>' \
      -d '{"customerId":"C-1001","amountCents":1999,"currency":"TRY","items":[{"sku":"ABC-001","qty":1}]}'
 
    # Update the order status
-   curl -s -X PATCH http://localhost:8081/orders/1/status \
+   curl -s -X PATCH http://localhost:8080/orders/1/status \
      -H 'Content-Type: application/json' \
      -H 'Authorization: Bearer <DEV_TOKEN>' \
      -d '{"status":"FULFILLED"}'
 
    # Inspect inventory levels
-   curl -s http://localhost:8083/inventory/ABC-001
+   curl -s http://localhost:8080/inventory/ABC-001 \
+     -H 'Authorization: Bearer <DEV_TOKEN>'
    ```
 
 8. **Reporting service smoke test**
    ```bash
    # Trigger a CSV export (JWT token required)
-   curl -s "http://localhost:8084/reports/orders?period=DAILY&refresh=true" \
+   curl -s "http://localhost:8080/reports/orders?period=DAILY&refresh=true" \
      -H 'Authorization: Bearer <DEV_TOKEN>' | jq
 
-   curl -s "http://localhost:8084/reports/orders/totals?period=DAILY" \
+   curl -s "http://localhost:8080/reports/orders/totals?period=DAILY" \
      -H 'Authorization: Bearer <DEV_TOKEN>' | jq
 
-   curl -s "http://localhost:8084/reports/orders/top-customers?limit=5" \
+   curl -s "http://localhost:8080/reports/orders/top-customers?limit=5" \
      -H 'Authorization: Bearer <DEV_TOKEN>' | jq
    ```
 
@@ -140,7 +145,7 @@ docker compose version
 
 ## Runtime Modes
 
-- **Docker Compose (recommended for demos):** Builds/pulls the four services plus Postgres, RabbitMQ, Prometheus, and Grafana. Follow `docs/setup/running.md#running-everything-via-docker-compose` for the full checklist (env overrides, smoke checks, teardown).
+- **Docker Compose (recommended for demos):** Builds/pulls the gateway + four services plus Postgres, RabbitMQ, Prometheus, and Grafana. Follow `docs/setup/running.md#running-everything-via-docker-compose` for the full checklist (env overrides, smoke checks, teardown).
 - **Local JVM (hot-reload friendly):** Start infra containers only (`postgres`, `rabbitmq`, `prometheus`, `grafana`) and run each Spring Boot app via `./mvnw spring-boot:run`. Environment exports and verification steps live in `docs/setup/running.md#running-services-locally-no-docker-images`.
 - **Deep dive & metrics:** `docs/setup/runtime-technical.md` contains the sequence diagrams, KPI PromQL queries, and alert thresholds that back the dashboards/alerts referenced below.
 
@@ -193,9 +198,11 @@ Micrometer publishes metrics used by the Grafana dashboard under the `reporting_
 
 | Service             | Port | Description                               |
 |---------------------|------|-------------------------------------------|
+| API Gateway         | 8080 | Edge routing + JWT validation             |
 | Order Service       | 8081 | Order API + outbox publisher              |
 | Notification Service| 8082 | Event consumer (mock notifications)       |
 | Inventory Service   | 8083 | Stock reserve/release API + consumers     |
+| Reporting Service   | 8084 | Reporting APIs + rollups/exports          |
 | PostgreSQL          | 5432 | Primary database `appdb`                  |
 | RabbitMQ            | 5672 | AMQP broker (UI on 15672)                 |
 | Prometheus          | 9090 | Metrics scraper                           |

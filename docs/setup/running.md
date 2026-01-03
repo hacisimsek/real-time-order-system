@@ -13,6 +13,10 @@ graph LR
         GrafanaUI["Grafana UI"]
     end
 
+    subgraph Edge
+        Gateway["API Gateway (8080)"]
+    end
+
     subgraph Services
         Order["Order Service (8081)"]
         Notification["Notification Service (8082)"]
@@ -27,9 +31,10 @@ graph LR
         Grafana["Grafana"]
     end
 
-    CLI --> Order
-    CLI --> Inventory
-    CLI --> Reporting
+    CLI --> Gateway
+    Gateway --> Order
+    Gateway --> Inventory
+    Gateway --> Reporting
     Order --> RabbitMQ
     Notification --> RabbitMQ
     Inventory --> RabbitMQ
@@ -57,7 +62,7 @@ graph LR
    ```
 2. **Build service images**
    ```bash
-   docker compose build order-service notification-service inventory-service reporting-service
+   docker compose build api-gateway order-service notification-service inventory-service reporting-service
    ```
 3. **Bring the whole stack up**
    ```bash
@@ -66,6 +71,7 @@ graph LR
    ```
 4. **Smoke health endpoints**
    ```bash
+   curl -s http://localhost:8080/actuator/health
    curl -s http://localhost:8081/actuator/health
    curl -s http://localhost:8084/actuator/health
    ```
@@ -74,12 +80,17 @@ graph LR
    docker compose logs order-service | grep "DEV ADMIN TOKEN"
    ```
    Copy the token (valid ~1h). Use it as `Authorization: Bearer <token>` for Order/Inventory/Reporting calls.
-6. **Metrics & dashboards**
+6. **Call APIs via the gateway**
+   ```bash
+   curl -s -X GET http://localhost:8080/reports/orders?period=DAILY \
+     -H "Authorization: Bearer <token>"
+   ```
+7. **Metrics & dashboards**
    - Prometheus: http://localhost:9090
    - Grafana: http://localhost:3000 (credentials from `GF_SECURITY_ADMIN_USER/PASSWORD` in `deploy/docker-compose.yml`, default `admin` / `admin`)
      - Import dashboards auto-provisioned (`rtos-services` + `reporting-overview`).
    - Reporting metrics: `curl -s http://localhost:8084/actuator/prometheus | head`
-7. **Tear down**
+8. **Tear down**
    ```bash
    docker compose down -v
    ```
@@ -104,6 +115,9 @@ graph LR
    export POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_DB=appdb POSTGRES_USER=app POSTGRES_PASSWORD=app
    export RABBIT_HOST=localhost RABBIT_PORT=5672 RABBIT_USER=rtos RABBIT_PASS=rtos
    export JWT_SECRET="$(grep JWT_SECRET ../deploy/.env | cut -d= -f2-)"
+   export ORDER_SERVICE_URL=http://localhost:8081
+   export INVENTORY_SERVICE_URL=http://localhost:8083
+   export REPORTING_SERVICE_URL=http://localhost:8084
    ```
 4. **Run each service via Maven Wrapper**
    ```bash
@@ -112,6 +126,7 @@ graph LR
    cd backend/notification-service && ./mvnw spring-boot:run
    cd backend/inventory-service && ./mvnw spring-boot:run
    cd backend/reporting-service && ./mvnw spring-boot:run
+   cd backend/api-gateway && ./mvnw spring-boot:run
    ```
 5. **Verify & demo**
    - Use the same curl commands as the Docker flow.

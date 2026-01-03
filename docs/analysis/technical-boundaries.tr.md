@@ -6,11 +6,11 @@ Bu doküman, RTOS'un teknik kapsamını, mimarisini, bağımlılıklarını ve o
 
 ## 1) Amaç ve Kapsam
 - **Amaç:** Gerçek zamanlı sipariş işleme, olay tabanlı servis iletişimi ve raporlama hattını göstermek.
-- **Kapsam:** Order, Inventory, Notification, Reporting servisleri; Postgres, RabbitMQ, Redis, Prometheus, Grafana.
-- **Kapsam dışı:** Ödeme/tahsilat, sevkiyat/fulfillment, dış sağlayıcı entegrasyonları, API gateway/WAF, prod ölçeği.
+- **Kapsam:** API Gateway; Order, Inventory, Notification, Reporting servisleri; Postgres, RabbitMQ, Redis, Prometheus, Grafana.
+- **Kapsam dışı:** Ödeme/tahsilat, sevkiyat/fulfillment, dış sağlayıcı entegrasyonları, WAF, prod ölçeği.
 
 ## 2) Sistem Özeti ve Ana Akış
-1. İstemci REST (JWT) ile Order servisine sipariş gönderir.
+1. İstemci REST (JWT) ile API Gateway üzerinden Order servisine sipariş gönderir.
 2. Order verisi Postgres'e yazılır; aynı transaction içinde outbox event kaydı oluşturulur.
 3. OutboxRelay, RabbitMQ `order.events` exchange'ine `order.created.v1` publish eder.
 4. Inventory ve Notification olayı tüketir; Inventory rezervasyonları idempotent şekilde günceller.
@@ -21,6 +21,7 @@ Bu doküman, RTOS'un teknik kapsamını, mimarisini, bağımlılıklarını ve o
 ```mermaid
 flowchart LR
     Client((Client / CLI))
+    Gateway[API Gateway]
     subgraph Core Services
         Order[Order Service]
         Inventory[Inventory Service]
@@ -34,9 +35,10 @@ flowchart LR
         Prometheus[(Prometheus)]
         Grafana[(Grafana)]
     end
-    Client --> Order
-    Client --> Inventory
-    Client --> Reporting
+    Client --> Gateway
+    Gateway --> Order
+    Gateway --> Inventory
+    Gateway --> Reporting
     Order --> Postgres
     Inventory --> Postgres
     Reporting --> Postgres
@@ -55,6 +57,7 @@ flowchart LR
 ## 3) Mimari ve Servis Sorumlulukları
 | Servis | Port | Sorumluluk |
 |---|---:|---|
+| API Gateway | 8080 | JWT dogrulama, routing, rate limiting, request validation |
 | Order | 8081 | Sipariş CRUD, outbox event üretimi |
 | Notification | 8082 | Olay tüketimi, örnek bildirim akışı |
 | Inventory | 8083 | Stok rezervasyonu, idempotent tüketim |

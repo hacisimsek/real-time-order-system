@@ -97,7 +97,7 @@ Suggested PromQL:
 ## Slide 12 — Lessons Learned + Next (Optional)
 - What worked: event-driven split, reliable publish, operability, metrics-first
 - What was tricky: token expiry, cache serialization, DLQ behavior
-- Optional next: K8s manifests, gateway, automated load tests
+- Optional next: K8s manifests, automated load tests, WAF hardening
 
 **Visual:** simple “next steps” list
 

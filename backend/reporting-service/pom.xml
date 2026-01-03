@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.hacisimsek</groupId>
+    <groupId>com.hacisimsek.rtos</groupId>
     <artifactId>reporting-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>reporting-service</name>
@@ -67,7 +67,7 @@
             <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.hacisimsek</groupId>
+            <groupId>com.hacisimsek.rtos</groupId>
             <artifactId>common-security</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
